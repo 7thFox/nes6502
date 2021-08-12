@@ -1,0 +1,48 @@
+#ifndef INSTRUCTION_H
+#define INSTRUCTION_H
+
+typedef enum
+{
+    AM_A,    // Accumulator
+    AM_abs,  // absolute
+    AM_absX, // absolute, X-indexed
+    AM_absY, // absolute, Y-indexed
+    AM_imm,  // immediate
+    AM_impl, // implied
+    AM_ind,  // indirect
+    AM_Xind, // X-indexed, indirect
+    AM_indY, // indirect, Y-indexed
+    AM_rel,  // relative
+    AM_zpg,  // zeropage
+    AM_zpgX, // zeropage, X-indexed
+    AM_zpgY, // zeropage, Y-indexed
+} AddressingMode;
+
+typedef struct {
+    const char *mnemonic;
+    AddressingMode addressing_mode;
+} InstructionMeta;
+
+#define m(m, addr, _) ((InstructionMeta){m, addr})
+
+InstructionMeta INSTRUCTIONS[0x100] = {
+
+    m("BRK", AM_impl, op_brk), m("ORA", AM_Xind, op_ora), m("___", AM_impl, op____), m("___", AM_impl, op____), m("___", AM_impl, op____), m("ORA", AM_zpg, op_ora),  m("ASL", AM_zpg, op_asl),  m("___", AM_impl, op____), m("PHP", AM_impl, op_php), m("ORA", AM_imm, op_ora),  m("ASL", AM_A, op_asl),    m("___", AM_impl, op____), m("___", AM_impl, op____), m("ORA", AM_abs, op_ora),  m("ASL", AM_abs, op_asl),  m("___", AM_impl, op____),
+    m("BPL", AM_rel, op_bpl),  m("ORA", AM_indY, op_ora), m("___", AM_impl, op____), m("___", AM_impl, op____), m("___", AM_impl, op____), m("ORA", AM_zpgX, op_ora), m("ASL", AM_zpgX, op_asl), m("___", AM_impl, op____), m("CLC", AM_impl, op_clc), m("ORA", AM_absY, op_ora), m("___", AM_impl, op____), m("___", AM_impl, op____), m("___", AM_impl, op____), m("ORA", AM_absX, op_ora), m("ASL", AM_absX, op_asl), m("___", AM_impl, op____),
+    m("JSR", AM_abs, op_jsr),  m("AND", AM_Xind, op_and), m("___", AM_impl, op____), m("___", AM_impl, op____), m("BIT", AM_zpg, op_bit),  m("AND", AM_zpg, op_and),  m("ROL", AM_zpg, op_rol),  m("___", AM_impl, op____), m("PLP", AM_impl, op_plp), m("AND", AM_imm, op_and),  m("ROL", AM_A, op_rol),    m("___", AM_impl, op____), m("BIT", AM_abs, op_bit),  m("AND", AM_abs, op_and),  m("ROL", AM_abs, op_rol),  m("___", AM_impl, op____),
+    m("BMI", AM_rel, op_bmi),  m("AND", AM_indY, op_and), m("___", AM_impl, op____), m("___", AM_impl, op____), m("___", AM_impl, op____), m("AND", AM_zpgX, op_and), m("ROL", AM_zpgX, op_rol), m("___", AM_impl, op____), m("SEC", AM_impl, op_sec), m("AND", AM_absY, op_and), m("___", AM_impl, op____), m("___", AM_impl, op____), m("___", AM_impl, op____), m("AND", AM_absX, op_and), m("ROL", AM_absX, op_rol), m("___", AM_impl, op____),
+    m("RTI", AM_impl, op_rti), m("EOR", AM_Xind, op_eor), m("___", AM_impl, op____), m("___", AM_impl, op____), m("___", AM_impl, op____), m("EOR", AM_zpg, op_eor),  m("LSR", AM_zpg, op_lsr),  m("___", AM_impl, op____), m("PHA", AM_impl, op_pha), m("EOR", AM_imm, op_eor),  m("LSR", AM_A, op_lsr),    m("___", AM_impl, op____), m("JMP", AM_abs, op_jmp),  m("EOR", AM_abs, op_eor),  m("LSR", AM_abs, op_lsr),  m("___", AM_impl, op____),
+    m("BVC", AM_rel, op_bvc),  m("EOR", AM_indY, op_eor), m("___", AM_impl, op____), m("___", AM_impl, op____), m("___", AM_impl, op____), m("EOR", AM_zpgX, op_eor), m("LSR", AM_zpgX, op_lsr), m("___", AM_impl, op____), m("CLI", AM_impl, op_cli), m("EOR", AM_absY, op_eor), m("___", AM_impl, op____), m("___", AM_impl, op____), m("___", AM_impl, op____), m("EOR", AM_absX, op_eor), m("LSR", AM_absX, op_lsr), m("___", AM_impl, op____),
+    m("RTS", AM_impl, op_rts), m("ADC", AM_Xind, op_adc), m("___", AM_impl, op____), m("___", AM_impl, op____), m("___", AM_impl, op____), m("ADC", AM_zpg, op_adc),  m("ROR", AM_zpg, op_ror),  m("___", AM_impl, op____), m("PLA", AM_impl, op_pla), m("ADC", AM_imm, op_adc),  m("ROR", AM_A, op_ror),    m("___", AM_impl, op____), m("JMP", AM_ind, op_jmp),  m("ADC", AM_abs, op_adc),  m("ROR", AM_abs, op_ror),  m("___", AM_impl, op____),
+    m("BVS", AM_rel, op_bvs),  m("ADC", AM_indY, op_adc), m("___", AM_impl, op____), m("___", AM_impl, op____), m("___", AM_impl, op____), m("ADC", AM_zpgX, op_adc), m("ROR", AM_zpgX, op_ror), m("___", AM_impl, op____), m("SEI", AM_impl, op_sei), m("ADC", AM_absY, op_adc), m("___", AM_impl, op____), m("___", AM_impl, op____), m("___", AM_impl, op____), m("ADC", AM_absX, op_adc), m("ROR", AM_absX, op_ror), m("___", AM_impl, op____),
+    m("___", AM_impl, op____), m("STA", AM_Xind, op_sta), m("___", AM_impl, op____), m("___", AM_impl, op____), m("STY", AM_zpg, op_sty),  m("STA", AM_zpg, op_sta),  m("STX", AM_zpg, op_stx),  m("___", AM_impl, op____), m("DEY", AM_impl, op_dey), m("___", AM_impl, op____), m("TXA", AM_impl, op_txa), m("___", AM_impl, op____), m("STY", AM_abs, op_sty),  m("STA", AM_abs, op_sta),  m("STX", AM_abs, op_stx),  m("___", AM_impl, op____),
+    m("BCC", AM_rel, op_bcc),  m("STA", AM_indY, op_sta), m("___", AM_impl, op____), m("___", AM_impl, op____), m("STY", AM_zpgX, op_sty), m("STA", AM_zpgX, op_sta), m("STX", AM_zpgY, op_stx), m("___", AM_impl, op____), m("TYA", AM_impl, op_tya), m("STA", AM_absY, op_sta), m("TXS", AM_impl, op_txs), m("___", AM_impl, op____), m("___", AM_impl, op____), m("STA", AM_absX, op_sta), m("___", AM_impl, op____), m("___", AM_impl, op____),
+    m("LDY", AM_imm, op_ldy),  m("LDA", AM_Xind, op_lda), m("LDX", AM_imm, op_ldx),  m("___", AM_impl, op____), m("LDY", AM_zpg, op_ldy),  m("LDA", AM_zpg, op_lda),  m("LDX", AM_zpg, op_ldx),  m("___", AM_impl, op____), m("TAY", AM_impl, op_tay), m("LDA", AM_imm, op_lda),  m("TAX", AM_impl, op_tax), m("___", AM_impl, op____), m("LDY", AM_abs, op_ldy),  m("LDA", AM_abs, op_lda),  m("LDX", AM_abs, op_ldx),  m("___", AM_impl, op____),
+    m("BCS", AM_rel, op_bcs),  m("LDA", AM_indY, op_lda), m("___", AM_impl, op____), m("___", AM_impl, op____), m("LDY", AM_zpgX, op_ldy), m("LDA", AM_zpgX, op_lda), m("LDX", AM_zpgY, op_ldx), m("___", AM_impl, op____), m("CLV", AM_impl, op_clv), m("LDA", AM_absY, op_lda), m("TSX", AM_impl, op_tsx), m("___", AM_impl, op____), m("LDY", AM_absX, op_ldy), m("LDA", AM_absX, op_lda), m("LDX", AM_absY, op_ldx), m("___", AM_impl, op____),
+    m("CPY", AM_imm, op_cpy),  m("CMP", AM_Xind, op_cmp), m("___", AM_impl, op____), m("___", AM_impl, op____), m("CPY", AM_zpg, op_cpy),  m("CMP", AM_zpg, op_cmp),  m("DEC", AM_zpg, op_dec),  m("___", AM_impl, op____), m("INY", AM_impl, op_iny), m("CMP", AM_imm, op_cmp),  m("DEX", AM_impl, op_dex), m("___", AM_impl, op____), m("CPY", AM_abs, op_cpy),  m("CMP", AM_abs, op_cmp),  m("DEC", AM_abs, op_dec),  m("___", AM_impl, op____),
+    m("BNE", AM_rel, op_bne),  m("CMP", AM_indY, op_cmp), m("___", AM_impl, op____), m("___", AM_impl, op____), m("___", AM_impl, op____), m("CMP", AM_zpgX, op_cmp), m("DEC", AM_zpgX, op_dec), m("___", AM_impl, op____), m("CLD", AM_impl, op_cld), m("CMP", AM_absY, op_cmp), m("___", AM_impl, op____), m("___", AM_impl, op____), m("___", AM_impl, op____), m("CMP", AM_absX, op_cmp), m("DEC", AM_absX, op_dec), m("___", AM_impl, op____),
+    m("CPX", AM_imm, op_cpx),  m("SBC", AM_Xind, op_sbc), m("___", AM_impl, op____), m("___", AM_impl, op____), m("CPX", AM_zpg, op_cpx),  m("SBC", AM_zpg, op_sbc),  m("INC", AM_zpg, op_inc),  m("___", AM_impl, op____), m("INX", AM_impl, op_inx), m("SBC", AM_imm, op_sbc),  m("NOP", AM_impl, op_nop), m("___", AM_impl, op____), m("CPX", AM_abs, op_cpx),  m("SBC", AM_abs, op_sbc),  m("INC", AM_abs, op_inc),  m("___", AM_impl, op____),
+    m("BEQ", AM_rel, op_beq),  m("SBC", AM_indY, op_sbc), m("___", AM_impl, op____), m("___", AM_impl, op____), m("___", AM_impl, op____), m("SBC", AM_zpgX, op_sbc), m("INC", AM_zpgX, op_inc), m("___", AM_impl, op____), m("SED", AM_impl, op_sed), m("SBC", AM_absY, op_sbc), m("___", AM_impl, op____), m("___", AM_impl, op____), m("___", AM_impl, op____), m("SBC", AM_absX, op_sbc), m("INC", AM_absX, op_inc), m("___", AM_impl, op____),
+
+};
+#endif

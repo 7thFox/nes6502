@@ -3,6 +3,7 @@
 #include "ncurses.h"
 #include "../headers/rom.h"
 #include "../headers/cpu6502.h"
+#include "../headers/instruction.h"
 
 void int_handle(int sig);
 void run_monitor(Cpu6502 *cpu);
@@ -51,14 +52,10 @@ int WIN_MEM_BYTES_PER_LINE;
 int WIN_MEM_COLS;
 WINDOW *win_current_mem_block;
 void draw_mem_block(MemoryBlock *b, memaddr addr, bool read);
-
-
-typedef int _box_intersects;
-const int UP = 1 << 0;
-const int LEFT = 1 << 1;
-const int RIGHT = 1 << 2;
-const int DOWN = 1 << 3;
-void box_draw(WINDOW *win, _box_intersects intersect, chtype ul, chtype ur, chtype ll, chtype lr);
+int WIN_INST_LINES;
+int WIN_INST_COLS;
+WINDOW *win_instructions;
+void draw_instructions(MemoryBlock *b, uint16_t pc);
 
 void run_monitor(Cpu6502 *cpu) {
     initscr();
@@ -85,6 +82,10 @@ void run_monitor(Cpu6502 *cpu) {
     WIN_MEM_COLS = (WIN_MEM_BYTES_PER_LINE * 3) - 1 + 6;
     win_current_mem_block = newwin(WIN_MEM_LINES + 2, WIN_MEM_COLS + 4, 0, 0);
 
+    WIN_INST_LINES = LINES - 2;
+    WIN_INST_COLS = COLS - WIN_MEM_COLS - 8;
+    win_instructions = newwin(WIN_INST_LINES + 2, WIN_INST_COLS + 4, 0, WIN_MEM_COLS+3);
+
     draw(cpu);
 
     char ch;
@@ -100,6 +101,13 @@ void run_monitor(Cpu6502 *cpu) {
     }
 }
 
+typedef int _box_intersects;
+const int UP = 1 << 0;
+const int LEFT = 1 << 1;
+const int RIGHT = 1 << 2;
+const int DOWN = 1 << 3;
+void box_draw(WINDOW *win, _box_intersects intersect, chtype ul, chtype ur, chtype ll, chtype lr);
+
 void draw(Cpu6502 *cpu) {
     bool read = cpu_is_read(cpu);
     draw_mem_block(
@@ -108,13 +116,17 @@ void draw(Cpu6502 *cpu) {
             : mem_get_write_block(cpu->memmap, cpu->addr_bus),
         cpu->addr_bus,
         read);
+
+    memaddr pc = cpu->pch << 8 | cpu->pcl;
+    draw_instructions(mem_get_read_block(cpu->memmap, pc), pc);
+
     wrefresh(stdscr);
 }
 
 void draw_mem_block(MemoryBlock *b, memaddr addr, bool read) {
     char fmt[7];
     wclear(win_current_mem_block);
-    box_draw(win_current_mem_block, 0, 0, 0, 0, 0);
+    box_draw(win_current_mem_block, RIGHT, 0, 0, 0, 0);
     wattron(win_current_mem_block, COLOR_PAIR(COLOR_NAME));
     if (b)
     {
@@ -155,6 +167,15 @@ void draw_mem_block(MemoryBlock *b, memaddr addr, bool read) {
     wattroff(win_current_mem_block, COLOR_PAIR(COLOR_FANCY));
 
     wrefresh(win_current_mem_block);
+}
+
+void draw_instructions(MemoryBlock *b, memaddr pc) {
+    wclear(win_instructions);
+    box_draw(win_instructions, LEFT, 0, 0, 0, 0);
+
+    mvwaddstr(win_instructions, 1, 2, INSTRUCTIONS[b->values[pc - b->range_low]].mnemonic);
+
+    wrefresh(win_instructions);
 }
 
 void box_draw(WINDOW *win, _box_intersects intersect, chtype ul, chtype ur, chtype ll, chtype lr)
