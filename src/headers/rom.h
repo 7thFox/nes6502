@@ -1,7 +1,7 @@
 #ifndef ROM_H
 #define ROM_H
 
-#include "memmap.h"
+#include "memaddr.h"
 #include "stdlib.h"
 #include "stdio.h"
 #include "stdbool.h"

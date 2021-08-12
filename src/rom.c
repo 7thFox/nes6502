@@ -34,7 +34,7 @@ bool rom_load(Rom *rom, const char *filepath) {
         remove_trivia(contents, &i, size);
         if (i + 1 >= size) break;
 
-        if (cap >= size) {
+        if (size >= cap) {
             cap += 255;
             rom->value = realloc(rom->value, sizeof(uint8_t) * cap);
         }
@@ -47,7 +47,6 @@ bool rom_load(Rom *rom, const char *filepath) {
 }
 
 uint8_t parse_byte(const char *contents, int *i, size_t l) {
-
     char c = contents[*i];
     (*i)++;
 
@@ -71,15 +70,15 @@ void remove_trivia(const char *contents, int *i, size_t l) {
     while (*i < l) {
         switch (contents[*i])
         {
+        case '\n':
         case ' ':
         case '\t':
-        case '\n':
         case '\r':
             (*i)++;
             break;
         case '#':
             (*i)++;
-            while (contents[*i] != '\n') (*i)++;
+            while (*i < l && contents[*i] != '\n') (*i)++;
             break;
         default:
             return;

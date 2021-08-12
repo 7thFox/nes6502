@@ -1,3 +1,6 @@
+clean:
+	rm -rf bin/
+
 bin:
 	mkdir bin
 
