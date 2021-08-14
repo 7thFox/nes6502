@@ -3,17 +3,21 @@
 
 #include "stdint.h"
 #include "memmap.h"
+#include "log.h"
 
 typedef struct {
     uint8_t ir;// Instruction Register
     uint8_t tcu;// Timing Control Unit
-    uint8_t pch;
-    uint8_t pcl;
+    uint8_t pc;
     uint8_t s;
     uint8_t x;
     uint8_t y;
     uint8_t a;
     uint8_t p;// Flags
+
+    // internal states/registers
+    uint8_t pd;
+    uint16_t addr_last_cycle;
 
     // 0 RW
     // 1 NMI
@@ -23,6 +27,8 @@ typedef struct {
     memaddr addr_bus;
     uint8_t data_bus;
     MemoryMap *memmap;
+
+    void* (*on_next_clock)(void*);
 } Cpu6502;
 
 void cpu_pulse(Cpu6502 *c);

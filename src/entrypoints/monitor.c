@@ -40,9 +40,8 @@ int main() {
 
     Cpu6502 cpu;
     cpu.memmap = &mem;
-    cpu.bit_fields |= 1 << 0;
-    cpu_resb(&cpu);
     cpu.addr_bus = rom.map_offset;
+    cpu_resb(&cpu);
 
     signal(SIGINT, int_handle);
     run_monitor(&cpu);
@@ -132,8 +131,7 @@ void draw(Cpu6502 *cpu) {
         cpu->addr_bus,
         read);
 
-    memaddr pc = cpu->pch << 8 | cpu->pcl;
-    draw_instructions(mem_get_read_block(cpu->memmap, pc), pc);
+    draw_instructions(mem_get_read_block(cpu->memmap, cpu->pc), cpu->pc);
 
     tracef("end draw\n");
 

@@ -27,4 +27,7 @@ void mem_add_rom(MemoryMap *m, Rom *r);
 MemoryBlock *mem_get_read_block(MemoryMap *m, memaddr addr);
 MemoryBlock *mem_get_write_block(MemoryMap *m, memaddr addr);
 
+uint8_t mem_read_addr(MemoryMap *m, memaddr addr);
+void mem_write_addr(MemoryMap *m, memaddr addr, uint8_t value);
+
 #endif
