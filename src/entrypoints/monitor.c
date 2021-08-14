@@ -82,14 +82,16 @@ void run_monitor(Cpu6502 *cpu) {
     init_pair(COLOR_NAME, COLOR_YELLOW, -1);
 #define COLOR_ADDRESS_LABEL 4
     init_pair(COLOR_ADDRESS_LABEL, COLOR_GREEN, -1);
+#define COLOR_UNIMPORTANT_BYTES 5
+    init_pair(COLOR_UNIMPORTANT_BYTES, COLOR_CYAN, -1);
 
     WIN_MEM_LINES = LINES - 2;
     WIN_MEM_BYTES_PER_LINE = 0x10;
-    WIN_MEM_COLS = (WIN_MEM_BYTES_PER_LINE * 3) - 1 + 6;
+    WIN_MEM_COLS = (WIN_MEM_BYTES_PER_LINE * 3) - 1 + 7;
     win_current_mem_block = newwin(WIN_MEM_LINES + 2, WIN_MEM_COLS + 4, 0, 0);
 
     WIN_INST_LINES = LINES - 2;
-    WIN_INST_COLS = COLS - WIN_MEM_COLS - 8;
+    WIN_INST_COLS = 7 /* "$ffff: " */ + N_MAX_BYTE_SIZE + N_MAX_TEXT_SIZE - 2 /* null terminals in count */;
     win_instructions = newwin(WIN_INST_LINES + 2, WIN_INST_COLS + 4, 0, WIN_MEM_COLS+3);
 
     wrefresh(stdscr);
@@ -104,6 +106,9 @@ noredraw:
         case 0x03:
             raise(SIGINT);
             return;
+        case ' ':
+            cpu_pulse(cpu);
+            break;
         default:
             goto noredraw;
         }
@@ -136,7 +141,7 @@ void draw(Cpu6502 *cpu) {
 }
 
 void draw_mem_block(MemoryBlock *b, memaddr addr, bool read) {
-    char fmt[7];
+    char fmt[8];
     wclear(win_current_mem_block);
     box_draw(win_current_mem_block, RIGHT, 0, 0, 0, 0);
     wattron(win_current_mem_block, COLOR_PAIR(COLOR_NAME));
@@ -151,7 +156,7 @@ void draw_mem_block(MemoryBlock *b, memaddr addr, bool read) {
         int val_start = 0;
         for (int l = 0; l < WIN_MEM_LINES && addr_start <= b->range_high; l++) {
             wattron(win_current_mem_block, COLOR_PAIR(COLOR_ADDRESS_LABEL));
-            snprintf(fmt, 7, "%04X: ", addr_start);
+            sprintf(fmt, "$%04X: ", addr_start);
             mvwaddstr(win_current_mem_block, l + 1, 2, fmt);
             wattroff(win_current_mem_block, COLOR_PAIR(COLOR_ADDRESS_LABEL));
 
@@ -186,14 +191,28 @@ void draw_instructions(MemoryBlock *b, memaddr pc) {
     wclear(win_instructions);
     box_draw(win_instructions, LEFT, 0, 0, 0, 0);
 
+    char addr_buff[8];
+
     uint16_t alignment_addr = disasm_get_alignment(disassembler, pc, WIN_INST_LINES - 1);
     if (alignment_addr < b->range_low) alignment_addr = b->range_low;
     uint16_t offset = alignment_addr - b->range_low;
     uint8_t *a = b->values + offset;
-    Disassembly dis = disasm(disassembler, b->values + offset, b->range_high - alignment_addr, 3);
+    Disassembly dis = disasm(disassembler, b->values + offset, b->range_high - alignment_addr, WIN_INST_LINES);
     for (int i = 0; i < dis.count; i++)
     {
-        mvwaddstr(win_instructions, 1+i, 2, dis.text[i]);
+        wattron(win_instructions, COLOR_PAIR(COLOR_ADDRESS_LABEL));
+        uint16_t addr = dis.offsets[i] + alignment_addr;
+        sprintf(addr_buff, "$%04x: ", addr);
+        mvwaddstr(win_instructions, 1 + i, 2, addr_buff);
+        wattroff(win_instructions, COLOR_PAIR(COLOR_ADDRESS_LABEL));
+
+        wattron(win_instructions, COLOR_PAIR(COLOR_UNIMPORTANT_BYTES));
+        waddstr(win_instructions, dis.bytes[i]);
+        wattroff(win_instructions, COLOR_PAIR(COLOR_UNIMPORTANT_BYTES));
+
+        if (addr == pc) wattron(win_instructions, COLOR_PAIR(COLOR_ADDRESSED));
+        waddstr(win_instructions, dis.text[i]);
+        wattroff(win_instructions, COLOR_PAIR(COLOR_ADDRESSED));
     }
 
     wrefresh(win_instructions);
