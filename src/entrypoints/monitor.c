@@ -3,7 +3,7 @@
 #include "ncurses.h"
 #include "../headers/rom.h"
 #include "../headers/cpu6502.h"
-#include "../headers/instruction.h"
+#include "../headers/disasm.h"
 
 void int_handle(int sig);
 void run_monitor(Cpu6502 *cpu);
@@ -56,8 +56,10 @@ int WIN_INST_LINES;
 int WIN_INST_COLS;
 WINDOW *win_instructions;
 void draw_instructions(MemoryBlock *b, uint16_t pc);
+Disassembler *disassembler;
 
 void run_monitor(Cpu6502 *cpu) {
+    disassembler = create_disassembler();
     initscr();
     // FILE *f = fopen("/dev/tty", "r+");
     // set_term(newterm(NULL, f, f));
@@ -66,6 +68,7 @@ void run_monitor(Cpu6502 *cpu) {
     curs_set(0);
     noecho();
     raw();
+    // cbreak();
     start_color();
     use_default_colors();
 #define COLOR_ADDRESSED 1
@@ -86,18 +89,22 @@ void run_monitor(Cpu6502 *cpu) {
     WIN_INST_COLS = COLS - WIN_MEM_COLS - 8;
     win_instructions = newwin(WIN_INST_LINES + 2, WIN_INST_COLS + 4, 0, WIN_MEM_COLS+3);
 
+    wrefresh(stdscr);
     draw(cpu);
 
     char ch;
     while (1) {
-        draw(cpu);
-        ch = getch();
+noredraw:
+        ch = getchar();
         switch (ch)
         {
         case 0x03:
             raise(SIGINT);
             return;
+        default:
+            goto noredraw;
         }
+        draw(cpu);
     }
 }
 
@@ -173,7 +180,8 @@ void draw_instructions(MemoryBlock *b, memaddr pc) {
     wclear(win_instructions);
     box_draw(win_instructions, LEFT, 0, 0, 0, 0);
 
-    mvwaddstr(win_instructions, 1, 2, INSTRUCTIONS[b->values[pc - b->range_low]].mnemonic);
+    Disassembly dis = disasm(disassembler, b->values + (pc - b->range_low), 1);
+    mvwaddstr(win_instructions, 1, 2, (char*)dis.text[0]);
 
     wrefresh(win_instructions);
 }
