@@ -1,8 +1,14 @@
 {
     "cSpell.words": [
         "Xind",
+        "debugf",
         "nblocks",
         "noredraw",
         "resb"
-    ]
+    ],
+    "files.associations": {
+        "cstddef": "c",
+        "cmath": "cpp",
+        "valarray": "cpp"
+    }
 }

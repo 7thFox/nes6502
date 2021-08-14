@@ -1,8 +1,7 @@
 #ifndef INSTRUCTION_H
 #define INSTRUCTION_H
 
-typedef enum
-{
+typedef enum {
     AM_A,    // Accumulator
     AM_abs,  // absolute
     AM_absX, // absolute, X-indexed
@@ -23,9 +22,32 @@ typedef struct {
     AddressingMode addressing_mode;
 } InstructionMeta;
 
+static int inst_get_size(InstructionMeta i) {
+    switch (i.addressing_mode)
+    {
+        case AM_A:
+        case AM_impl:
+            return 1;
+        case AM_zpg:
+        case AM_imm:
+        case AM_Xind:
+        case AM_indY:
+        case AM_rel:
+        case AM_zpgX:
+        case AM_zpgY:
+            return 2;
+        case AM_abs:
+        case AM_absX:
+        case AM_absY:
+        case AM_ind:
+            return 3;
+    }
+    return 0;
+}
+
 #define m(m, addr, _) ((InstructionMeta){m, addr})
 
-InstructionMeta INSTRUCTIONS[0x100] = {
+static InstructionMeta INSTRUCTIONS[0x100] = {
 
     m("BRK", AM_impl, op_brk), m("ORA", AM_Xind, op_ora), m("???", AM_impl, op____), m("???", AM_impl, op____), m("???", AM_impl, op____), m("ORA", AM_zpg, op_ora),  m("ASL", AM_zpg, op_asl),  m("???", AM_impl, op____), m("PHP", AM_impl, op_php), m("ORA", AM_imm, op_ora),  m("ASL", AM_A, op_asl),    m("???", AM_impl, op____), m("???", AM_impl, op____), m("ORA", AM_abs, op_ora),  m("ASL", AM_abs, op_asl),  m("???", AM_impl, op____),
     m("BPL", AM_rel, op_bpl),  m("ORA", AM_indY, op_ora), m("???", AM_impl, op____), m("???", AM_impl, op____), m("???", AM_impl, op____), m("ORA", AM_zpgX, op_ora), m("ASL", AM_zpgX, op_asl), m("???", AM_impl, op____), m("CLC", AM_impl, op_clc), m("ORA", AM_absY, op_ora), m("???", AM_impl, op____), m("???", AM_impl, op____), m("???", AM_impl, op____), m("ORA", AM_absX, op_ora), m("ASL", AM_absX, op_asl), m("???", AM_impl, op____),

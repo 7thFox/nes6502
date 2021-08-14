@@ -1,14 +1,21 @@
 #include "stdio.h"
 #include "signal.h"
 #include "ncurses.h"
+#include "../headers/log.h"
 #include "../headers/rom.h"
 #include "../headers/cpu6502.h"
 #include "../headers/disasm.h"
 
 void int_handle(int sig);
 void run_monitor(Cpu6502 *cpu);
+FILE *log_file = 0;
 
 int main() {
+    if (!(log_file = fopen("monitor.log", "w+")))
+    {
+        fprintf(stderr, "Failed to open log file");
+        return 1;
+    }
 
     Rom rom;
     if (!rom_load(&rom, "./example/scratch.rom")) {
@@ -43,6 +50,7 @@ int main() {
 
 void int_handle(int sig) {
     endwin();
+    if (log_file) fclose(log_file);
 }
 
 void draw(Cpu6502 *cpu);
@@ -61,14 +69,9 @@ Disassembler *disassembler;
 void run_monitor(Cpu6502 *cpu) {
     disassembler = create_disassembler();
     initscr();
-    // FILE *f = fopen("/dev/tty", "r+");
-    // set_term(newterm(NULL, f, f));
-    // printf("\rfoobar\n");
-
     curs_set(0);
     noecho();
     raw();
-    // cbreak();
     start_color();
     use_default_colors();
 #define COLOR_ADDRESSED 1
@@ -127,6 +130,8 @@ void draw(Cpu6502 *cpu) {
     memaddr pc = cpu->pch << 8 | cpu->pcl;
     draw_instructions(mem_get_read_block(cpu->memmap, pc), pc);
 
+    tracef("end draw\n");
+
     wrefresh(stdscr);
 }
 
@@ -177,11 +182,19 @@ void draw_mem_block(MemoryBlock *b, memaddr addr, bool read) {
 }
 
 void draw_instructions(MemoryBlock *b, memaddr pc) {
+    tracef("draw_instructions\n");
     wclear(win_instructions);
     box_draw(win_instructions, LEFT, 0, 0, 0, 0);
 
-    Disassembly dis = disasm(disassembler, b->values + (pc - b->range_low), 1);
-    mvwaddstr(win_instructions, 1, 2, (char*)dis.text[0]);
+    uint16_t alignment_addr = disasm_get_alignment(disassembler, pc, WIN_INST_LINES - 1);
+    if (alignment_addr < b->range_low) alignment_addr = b->range_low;
+    uint16_t offset = alignment_addr - b->range_low;
+    uint8_t *a = b->values + offset;
+    Disassembly dis = disasm(disassembler, b->values + offset, b->range_high - alignment_addr, 3);
+    for (int i = 0; i < dis.count; i++)
+    {
+        mvwaddstr(win_instructions, 1+i, 2, dis.text[i]);
+    }
 
     wrefresh(win_instructions);
 }
