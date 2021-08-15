@@ -1,12 +1,28 @@
 #include "headers/memmap.h"
 
-void mem_add_rom(MemoryMap *m, Rom *r) {
+void mem_add_rom(MemoryMap *m, Rom *r, const char *name) {
     if (r->rom_size > 0) {
-        m->read_blocks[m->n_read_blocks].block_name = "ROM";
+        m->read_blocks[m->n_read_blocks].block_name = name;
         m->read_blocks[m->n_read_blocks].range_low = r->map_offset;
         m->read_blocks[m->n_read_blocks].range_high = (memaddr)(r->map_offset + r->rom_size - 1);
         m->read_blocks[m->n_read_blocks].values = r->value;
         m->n_read_blocks++;
+    }
+}
+
+void mem_add_ram(MemoryMap *m, Ram *r, const char *name) {
+    if (r->size > 0) {
+        m->read_blocks[m->n_read_blocks].block_name = name;
+        m->read_blocks[m->n_read_blocks].range_low = r->map_offset;
+        m->read_blocks[m->n_read_blocks].range_high = (memaddr)(r->map_offset + r->size - 1);
+        m->read_blocks[m->n_read_blocks].values = r->value;
+        m->n_read_blocks++;
+
+        m->write_blocks[m->n_write_blocks].block_name = name;
+        m->write_blocks[m->n_write_blocks].range_low = r->map_offset;
+        m->write_blocks[m->n_write_blocks].range_high = (memaddr)(r->map_offset + r->size - 1);
+        m->write_blocks[m->n_write_blocks].values = r->value;
+        m->n_write_blocks++;
     }
 }
 

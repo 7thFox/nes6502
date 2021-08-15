@@ -3,9 +3,12 @@
 #include "signal.h"
 #include "ncurses.h"
 #include "../headers/log.h"
+#include "../headers/ram.h"
 #include "../headers/rom.h"
 #include "../headers/cpu6502.h"
 #include "../headers/disasm.h"
+
+#define NES_MODE 1
 
 void sig_err(int code) {
     endwin();
@@ -41,16 +44,37 @@ int main() {
         return 1;
     }
 
+
+    MemoryMap mem;
+    mem.n_read_blocks = 0;
+    mem.n_write_blocks = 0;
+
     Rom rom;
     if (!rom_load(&rom, ROM_FILE)) {
         fprintf(stderr, "Failed parsing rom file.\n");
         return 1;
     }
+    mem_add_rom(&mem, &rom, "ROM");
 
-    MemoryMap mem;
-    mem.n_read_blocks = 0;
-    mem.n_write_blocks = 0;
-    mem_add_rom(&mem, &rom);
+#if NES_MODE
+    Ram zpg_ram;
+    zpg_ram.map_offset = 0x0000;
+    zpg_ram.size = 0x100;
+    zpg_ram.value = malloc(zpg_ram.size);
+    mem_add_ram(&mem, &zpg_ram, "ZPG");
+
+    Ram stack_ram;
+    stack_ram.map_offset = 0x0100;
+    stack_ram.size = 0x0100;
+    stack_ram.value = malloc(stack_ram.size);
+    mem_add_ram(&mem, &stack_ram, "STACK");
+
+    Ram ram;
+    ram.map_offset = 0x0200;
+    ram.size = 0x0600;
+    ram.value = malloc(ram.size);
+    mem_add_ram(&mem, &ram, "RAM");
+#endif
 
     Cpu6502 cpu;
     cpu.memmap = &mem;

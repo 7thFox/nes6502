@@ -2,8 +2,10 @@
 #define MEMMAP_H
 
 #include "stdint.h"
-#include "rom.h"
 #include "stdio.h"
+
+#include "rom.h"
+#include "ram.h"
 
 typedef uint16_t memaddr;
 
@@ -22,7 +24,8 @@ typedef struct {
     MemoryBlock write_blocks[MEM_MAP_MAX_BLOCKS];
 } MemoryMap;
 
-void mem_add_rom(MemoryMap *m, Rom *r);
+void mem_add_rom(MemoryMap *m, Rom *r, const char *name);
+void mem_add_ram(MemoryMap *m, Ram *r, const char *name);
 
 MemoryBlock *mem_get_read_block(MemoryMap *m, memaddr addr);
 MemoryBlock *mem_get_write_block(MemoryMap *m, memaddr addr);
