@@ -7,7 +7,8 @@
 #define LOG_LEVEL_DEBUG 3
 #define LOG_LEVEL_TRACE 4
 
-#define LOG_LEVEL LOG_LEVEL_TRACE
+// #define LOG_LEVEL LOG_LEVEL_TRACE
+#define LOG_LEVEL LOG_LEVEL_DEBUG
 
 #include "stdio.h"
 

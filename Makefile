@@ -4,8 +4,11 @@ clean:
 bin:
 	mkdir bin
 
-build-monitor: bin
+monitor: bin
 	gcc -lncurses src/*.c src/entrypoints/monitor.c -o bin/monitor
 
-monitor: build-monitor
+run-monitor: monitor
 	bin/monitor
+
+bin2rom: bin
+	gcc src/entrypoints/bin2rom.c -o bin/bin2rom

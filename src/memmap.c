@@ -2,7 +2,7 @@
 
 void mem_add_rom(MemoryMap *m, Rom *r) {
     if (r->rom_size > 0) {
-        m->read_blocks[m->n_read_blocks].block_name = "RAM";
+        m->read_blocks[m->n_read_blocks].block_name = "ROM";
         m->read_blocks[m->n_read_blocks].range_low = r->map_offset;
         m->read_blocks[m->n_read_blocks].range_high = (memaddr)(r->map_offset + r->rom_size - 1);
         m->read_blocks[m->n_read_blocks].values = r->value;

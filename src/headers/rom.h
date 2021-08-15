@@ -6,6 +6,7 @@
 #include "stdio.h"
 #include "stdbool.h"
 #include "stdint.h"
+#include "log.h"
 
 typedef struct {
     memaddr map_offset;

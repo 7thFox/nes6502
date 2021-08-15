@@ -32,10 +32,14 @@ void cpu_resb(Cpu6502 *c) {
     c->bit_fields |= 1 << 0;
     // we skip the whole 2-cycle set pc part (for now anyway)
     // by hacky coincidence, not defining this sets it to $0000 which is how I set up the rom for testing
-    c->pc = mem_read_addr(c->memmap, 0xfffc) | (mem_read_addr(c->memmap, 0xfffd) << 8);
+    uint8_t lo = mem_read_addr(c->memmap, 0xfffc);
+    uint8_t hi = mem_read_addr(c->memmap, 0xfffd);
+    // c->pc = (hi << 8) | lo;
+    c->pc = (hi << 8) | lo;
     c->addr_bus = c->pc;
     c->tcu = 0;
     c->on_next_clock = (void *(*)(void *))(_cpu_fetch_opcode);
+    logf("Reset CPU. PC set to $%04x ($fffc: $%02x, $fffd: $%02x)\n", c->pc, lo, hi);
 }
 
 void* _cpu_fetch_opcode(Cpu6502 *c) {

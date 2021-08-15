@@ -6,6 +6,9 @@
 #include "../headers/cpu6502.h"
 #include "../headers/disasm.h"
 
+// const char *ROM_FILE = "./example/scratch.rom";
+const char *ROM_FILE = "./example/klaus2m5_functional_test.rom";
+
 void int_handle(int sig);
 void run_monitor(Cpu6502 *cpu);
 FILE *log_file = 0;
@@ -18,7 +21,7 @@ int main() {
     }
 
     Rom rom;
-    if (!rom_load(&rom, "./example/scratch.rom")) {
+    if (!rom_load(&rom, ROM_FILE)) {
         fprintf(stderr, "Failed parsing rom file.\n");
         return 1;
     }
@@ -42,6 +45,8 @@ int main() {
     cpu.memmap = &mem;
     cpu.addr_bus = rom.map_offset;
     cpu_resb(&cpu);
+    cpu.pc = 0;
+    cpu.addr_bus = cpu.pc;
 
     signal(SIGINT, int_handle);
     run_monitor(&cpu);
@@ -64,6 +69,13 @@ int WIN_INST_COLS;
 WINDOW *win_instructions;
 void draw_instructions(MemoryBlock *b, uint16_t pc);
 Disassembler *disassembler;
+int WIN_REG_LINES;
+#define WIN_REG_BORDER1 12
+#define WIN_REG_BORDER2 23
+#define WIN_REG_BORDER3 34
+#define WIN_REG_COLS WIN_REG_BORDER3 - 3
+WINDOW *win_registers;
+void draw_registers(Cpu6502 *cpu);
 
 void run_monitor(Cpu6502 *cpu) {
     disassembler = create_disassembler();
@@ -92,6 +104,9 @@ void run_monitor(Cpu6502 *cpu) {
     WIN_INST_LINES = LINES - 2;
     WIN_INST_COLS = 7 /* "$ffff: " */ + N_MAX_BYTE_SIZE + N_MAX_TEXT_SIZE - 2 /* null terminals in count */;
     win_instructions = newwin(WIN_INST_LINES + 2, WIN_INST_COLS + 4, 0, WIN_MEM_COLS+3);
+
+    WIN_REG_LINES = LINES - 2;
+    win_registers = newwin(WIN_REG_LINES + 2, WIN_REG_COLS + 4, 0, WIN_MEM_COLS + WIN_INST_COLS + 6);
 
     wrefresh(stdscr);
     draw(cpu);
@@ -132,6 +147,8 @@ void draw(Cpu6502 *cpu) {
         read);
 
     draw_instructions(mem_get_read_block(cpu->memmap, cpu->pc), cpu->pc);
+
+    draw_registers(cpu);
 
     tracef("end draw\n");
 
@@ -187,7 +204,7 @@ void draw_mem_block(MemoryBlock *b, memaddr addr, bool read) {
 void draw_instructions(MemoryBlock *b, memaddr pc) {
     tracef("draw_instructions\n");
     wclear(win_instructions);
-    box_draw(win_instructions, LEFT, 0, 0, 0, 0);
+    box_draw(win_instructions, LEFT | RIGHT, 0, 0, 0, 0);
 
     char addr_buff[8];
 
@@ -214,6 +231,36 @@ void draw_instructions(MemoryBlock *b, memaddr pc) {
     }
 
     wrefresh(win_instructions);
+}
+
+void draw_registers(Cpu6502 *cpu) {
+    wclear(win_registers);
+    box_draw(win_registers, LEFT, 0, 0, 0, 0);
+
+    char buff[64];
+
+    mvwaddch(win_registers, 0, WIN_REG_BORDER1, ACS_TTEE);
+    mvwaddch(win_registers, 0, WIN_REG_BORDER2, ACS_TTEE);
+    mvwaddch(win_registers, 0, WIN_REG_BORDER3, ACS_TTEE);
+
+    sprintf(buff, "PC: $%04x | IR:  %02X  | PD: $%02x  ", cpu->pc, cpu->ir, cpu->pd);
+    mvwaddstr(win_registers, 1, 2, buff);
+    mvwaddch( win_registers, 1, WIN_REG_BORDER1, ACS_VLINE);
+    mvwaddch( win_registers, 1, WIN_REG_BORDER2, ACS_VLINE);
+
+    mvwaddch(win_registers, 2, 0, ACS_LTEE);
+    mvwhline(win_registers, 2, 1, ACS_HLINE, WIN_REG_BORDER3 - 1);
+    mvwaddch(win_registers, 2, WIN_REG_BORDER1, ACS_PLUS);
+    mvwaddch(win_registers, 2, WIN_REG_BORDER2, ACS_PLUS);
+    mvwaddch(win_registers, 2, WIN_REG_BORDER3, ACS_RTEE);
+
+
+    sprintf(buff, " X: $%02x   |  Y: $%02x  |  A: $%02x  |", cpu->x, cpu->y, cpu->a);
+    mvwaddstr(win_registers, 3, 2, buff);
+    mvwaddch( win_registers, 3, WIN_REG_BORDER1, ACS_VLINE);
+    mvwaddch( win_registers, 3, WIN_REG_BORDER2, ACS_VLINE);
+
+    wrefresh(win_registers);
 }
 
 void box_draw(WINDOW *win, _box_intersects intersect, chtype ul, chtype ur, chtype ll, chtype lr)

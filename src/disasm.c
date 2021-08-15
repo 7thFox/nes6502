@@ -7,7 +7,6 @@ Disassembler *create_disassembler() {
 }
 
 Disassembly disasm(Disassembler* d, uint8_t *data_aligned, size_t data_size, int n) {
-    debugf("Getting %i instructions\n", n);
     if (n > N_MAX_DISASM) n = N_MAX_DISASM;
     int iData = 0;
     int iInst = 0;
