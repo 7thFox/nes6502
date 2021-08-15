@@ -1,3 +1,4 @@
+#include "execinfo.h"
 #include "stdio.h"
 #include "signal.h"
 #include "ncurses.h"
@@ -6,14 +7,34 @@
 #include "../headers/cpu6502.h"
 #include "../headers/disasm.h"
 
+void sig_err(int code) {
+    endwin();
+
+    const size_t BT_BUFFER_SIZE = 255;
+    void *bt[BT_BUFFER_SIZE];
+    int nbt = backtrace(bt, BT_BUFFER_SIZE);
+    char **symbols = backtrace_symbols(bt, BT_BUFFER_SIZE);
+    printf("Stack Trace:\n");
+    // Skipping first frame (error_common) + 1 (calling error function)
+    for (int i = 0; i < nbt; i++)
+    {
+        printf("\t%s\n", symbols[i]);
+    }
+    free(symbols);
+    exit(EXIT_FAILURE);
+}
+
 // const char *ROM_FILE = "./example/scratch.rom";
-const char *ROM_FILE = "./example/klaus2m5_functional_test.rom";
+// const char *ROM_FILE = "./example/klaus2m5_functional_test.rom";
+const char *ROM_FILE = "./example/nestest-prg.rom";
 
 void int_handle(int sig);
 void run_monitor(Cpu6502 *cpu);
 FILE *log_file = 0;
 
 int main() {
+    signal(SIGSEGV, sig_err);
+
     if (!(log_file = fopen("monitor.log", "w+")))
     {
         fprintf(stderr, "Failed to open log file");
@@ -26,16 +47,6 @@ int main() {
         return 1;
     }
 
-    // printf("Rom loaded:\n");
-    // printf("\tOffset: %04x\n", rom.map_offset);
-    // printf("\tSize: %i\n", rom.rom_size);
-    // printf("\tContents:");
-    // for (int i = 0; i < rom.rom_size; i++) {
-    //     if (i % 16 == 0) printf("\n\t\t");
-    //     printf("%02x ", rom.value[i]);
-    // }
-    // printf("\n");
-
     MemoryMap mem;
     mem.n_read_blocks = 0;
     mem.n_write_blocks = 0;
@@ -45,8 +56,6 @@ int main() {
     cpu.memmap = &mem;
     cpu.addr_bus = rom.map_offset;
     cpu_resb(&cpu);
-    cpu.pc = 0;
-    cpu.addr_bus = cpu.pc;
 
     signal(SIGINT, int_handle);
     run_monitor(&cpu);
@@ -206,28 +215,35 @@ void draw_instructions(MemoryBlock *b, memaddr pc) {
     wclear(win_instructions);
     box_draw(win_instructions, LEFT | RIGHT, 0, 0, 0, 0);
 
-    char addr_buff[8];
-
-    uint16_t alignment_addr = disasm_get_alignment(disassembler, pc, WIN_INST_LINES - 1);
-    if (alignment_addr < b->range_low) alignment_addr = b->range_low;
-    uint16_t offset = alignment_addr - b->range_low;
-    uint8_t *a = b->values + offset;
-    Disassembly dis = disasm(disassembler, b->values + offset, b->range_high - alignment_addr, WIN_INST_LINES);
-    for (int i = 0; i < dis.count; i++)
+    if (b)
     {
-        wattron(win_instructions, COLOR_PAIR(COLOR_ADDRESS_LABEL));
-        uint16_t addr = dis.offsets[i] + alignment_addr;
-        sprintf(addr_buff, "$%04x: ", addr);
-        mvwaddstr(win_instructions, 1 + i, 2, addr_buff);
-        wattroff(win_instructions, COLOR_PAIR(COLOR_ADDRESS_LABEL));
+        char addr_buff[8];
 
-        wattron(win_instructions, COLOR_PAIR(COLOR_UNIMPORTANT_BYTES));
-        waddstr(win_instructions, dis.bytes[i]);
-        wattroff(win_instructions, COLOR_PAIR(COLOR_UNIMPORTANT_BYTES));
+        uint16_t alignment_addr = disasm_get_alignment(disassembler, pc, WIN_INST_LINES - 1);
+        if (alignment_addr < b->range_low) alignment_addr = b->range_low;
+        uint16_t offset = alignment_addr - b->range_low;
+        uint8_t *a = b->values + offset;
+        Disassembly dis = disasm(disassembler, b->values + offset, b->range_high - alignment_addr, WIN_INST_LINES);
+        for (int i = 0; i < dis.count; i++)
+        {
+            wattron(win_instructions, COLOR_PAIR(COLOR_ADDRESS_LABEL));
+            uint16_t addr = dis.offsets[i] + alignment_addr;
+            sprintf(addr_buff, "$%04x: ", addr);
+            mvwaddstr(win_instructions, 1 + i, 2, addr_buff);
+            wattroff(win_instructions, COLOR_PAIR(COLOR_ADDRESS_LABEL));
 
-        if (addr == pc) wattron(win_instructions, COLOR_PAIR(COLOR_ADDRESSED));
-        waddstr(win_instructions, dis.text[i]);
-        wattroff(win_instructions, COLOR_PAIR(COLOR_ADDRESSED));
+            wattron(win_instructions, COLOR_PAIR(COLOR_UNIMPORTANT_BYTES));
+            waddstr(win_instructions, dis.bytes[i]);
+            wattroff(win_instructions, COLOR_PAIR(COLOR_UNIMPORTANT_BYTES));
+
+            if (addr == pc) wattron(win_instructions, COLOR_PAIR(COLOR_ADDRESSED));
+            waddstr(win_instructions, dis.text[i]);
+            wattroff(win_instructions, COLOR_PAIR(COLOR_ADDRESSED));
+        }
+    }
+    else
+    {
+        mvwaddstr(win_instructions, 1, 2, "Unaddressable Memory");
     }
 
     wrefresh(win_instructions);

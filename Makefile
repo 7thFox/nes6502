@@ -5,7 +5,7 @@ bin:
 	mkdir bin
 
 monitor: bin
-	gcc -lncurses src/*.c src/entrypoints/monitor.c -o bin/monitor
+	gcc -lncurses -rdynamic src/*.c src/entrypoints/monitor.c -o bin/monitor
 
 run-monitor: monitor
 	bin/monitor
