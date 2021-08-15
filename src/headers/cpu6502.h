@@ -5,6 +5,17 @@
 #include "memmap.h"
 #include "log.h"
 
+typedef enum {
+    STAT_N_NEGATIVE     = 0x80,
+    STAT_V_OVERFLOW     = 0x40,
+    STAT___IGNORE       = 0x20,
+    STAT_B_BREAK        = 0x10,
+    STAT_D_DECIMAL      = 0x08,
+    STAT_I_INTERRUPT    = 0x04,
+    STAT_Z_ZERO         = 0x02,
+    STAT_C_CARRY        = 0x01,
+} StatusFlags;
+
 typedef struct {
     uint8_t ir;// Instruction Register
     uint8_t tcu;// Timing Control Unit

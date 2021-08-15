@@ -1,5 +1,8 @@
 #include "headers/cpu6502.h"
 
+#define setflag(p, f) p |= f
+#define unsetflag(p, f) p &= ~(f);
+
 void _cpu_read(Cpu6502 *c) {
     c->pd = mem_read_addr(c->memmap, c->addr_last_cycle);
 }
@@ -25,11 +28,8 @@ void cpu_pulse(Cpu6502 *c) {
 }
 
 void cpu_resb(Cpu6502 *c) {
-    c->p |= 1 << 5;    // ?
-    c->p |= 1 << 3;    // B
-    c->p &= ~(1 << 3); // D
-    c->p |= 1 << 2;    // I
-    c->bit_fields |= 1 << 0;
+    setflag(c->p, STAT___IGNORE | STAT_B_BREAK | STAT_I_INTERRUPT);
+    unsetflag(c->p, STAT_D_DECIMAL);
     // we skip the whole 2-cycle set pc part (for now anyway)
     // by hacky coincidence, not defining this sets it to $0000 which is how I set up the rom for testing
     uint8_t lo = mem_read_addr(c->memmap, 0xfffc);
@@ -64,19 +64,19 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
             switch (op_b)
             {
                 case 0:
-                case 1:// zpg
-                case 2:// impl
+                case 1: // zpg
+                case 2: // impl
                 {
                     switch (op_a)
                     {
-                        case 0:// PHP
-                        case 1:// PLP
-                        case 2:// PHA
-                        case 3:// PLA
-                        case 4:// DEY
-                        case 5:// TAY
-                        case 6:// INY
-                        case 7:// INX
+                        case 0: // PHP
+                        case 1: // PLP
+                        case 2: // PHA
+                        case 3: // PLA
+                        case 4: // DEY
+                        case 5: // TAY
+                        case 6: // INY
+                        case 7: // INX
                             c->x++;
                             break;
                     }
@@ -85,12 +85,29 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                     c->addr_bus = c->pc;
                     return _cpu_fetch_opcode;
                 }
-                case 3:// abs
+                case 3: // abs
                     c->addr_bus++;
                     return _cpu_fetch_hi;
                 case 4: // rel
-                case 5:// zpg,X
-                case 6:// impl
+                case 5: // zpg,X
+                case 6: // impl
+                    switch (op_a)
+                    {
+                        case 0: // CLC
+                        case 1: // SEC
+                        case 2: // CLI
+                        case 3: // SEI
+                            setflag(c->p, STAT_I_INTERRUPT);
+                        case 4: // TYA
+                        case 5: // CLV
+                        case 6: // CLD
+                            unsetflag(c->p, STAT_D_DECIMAL);
+                        case 7: // SED
+                    }
+                    c->tcu = 0;
+                    c->pc++;
+                    c->addr_bus = c->pc;
+                    return _cpu_fetch_opcode;
                 case 7:// abs,X
             }
             break;
