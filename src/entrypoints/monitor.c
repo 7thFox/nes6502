@@ -103,10 +103,15 @@ WINDOW *win_instructions;
 void draw_instructions(MemoryBlock *b, uint16_t pc);
 Disassembler *disassembler;
 int WIN_REG_LINES;
-#define WIN_REG_BORDER1 12
-#define WIN_REG_BORDER2 23
-#define WIN_REG_BORDER3 34
-#define WIN_REG_COLS WIN_REG_BORDER3 - 3
+// #define WIN_REG_BORDER1 12
+// #define WIN_REG_BORDER2 24
+#define WIN_REG_WIDTH_1_4 9
+#define WIN_REG_WIDTH_2_4 18
+#define WIN_REG_WIDTH_3_4 27
+#define WIN_REG_WIDTH_1_3 12
+#define WIN_REG_WIDTH_2_3 24
+#define WIN_REG_WIDTH 36
+#define WIN_REG_COLS WIN_REG_WIDTH - 3
 WINDOW *win_registers;
 void draw_registers(Cpu6502 *cpu);
 
@@ -279,26 +284,88 @@ void draw_registers(Cpu6502 *cpu) {
 
     char buff[64];
 
-    mvwaddch(win_registers, 0, WIN_REG_BORDER1, ACS_TTEE);
-    mvwaddch(win_registers, 0, WIN_REG_BORDER2, ACS_TTEE);
-    mvwaddch(win_registers, 0, WIN_REG_BORDER3, ACS_TTEE);
+    mvwaddch(win_registers, 0, WIN_REG_WIDTH_1_3, ACS_TTEE);
+    mvwaddch(win_registers, 0, WIN_REG_WIDTH_2_3, ACS_TTEE);
+    mvwaddch(win_registers, 0, WIN_REG_WIDTH, ACS_TTEE);
 
-    sprintf(buff, "PC: $%04x | IR:  %02X  | PD: $%02x  ", cpu->pc, cpu->ir, cpu->pd);
-    mvwaddstr(win_registers, 1, 2, buff);
-    mvwaddch( win_registers, 1, WIN_REG_BORDER1, ACS_VLINE);
-    mvwaddch( win_registers, 1, WIN_REG_BORDER2, ACS_VLINE);
+    const int PC_LINE_INDEX = 1;
+    sprintf(buff, "PC: $%04x | IR:  %02X   | TCU: %i    |", cpu->pc, cpu->ir, cpu->tcu);
+    mvwaddstr(win_registers, PC_LINE_INDEX, 2, buff);
+    mvwaddch( win_registers, PC_LINE_INDEX, WIN_REG_WIDTH_1_3, ACS_VLINE);
+    mvwaddch( win_registers, PC_LINE_INDEX, WIN_REG_WIDTH_2_3, ACS_VLINE);
+    mvwaddch( win_registers, PC_LINE_INDEX, WIN_REG_WIDTH, ACS_VLINE);
 
-    mvwaddch(win_registers, 2, 0, ACS_LTEE);
-    mvwhline(win_registers, 2, 1, ACS_HLINE, WIN_REG_BORDER3 - 1);
-    mvwaddch(win_registers, 2, WIN_REG_BORDER1, ACS_PLUS);
-    mvwaddch(win_registers, 2, WIN_REG_BORDER2, ACS_PLUS);
-    mvwaddch(win_registers, 2, WIN_REG_BORDER3, ACS_RTEE);
+    mvwaddch(win_registers, PC_LINE_INDEX+1, 0, ACS_LTEE);
+    mvwhline(win_registers, PC_LINE_INDEX+1, 1, ACS_HLINE, WIN_REG_WIDTH - 1);
+    mvwaddch(win_registers, PC_LINE_INDEX+1, WIN_REG_WIDTH_1_3, ACS_PLUS);
+    mvwaddch(win_registers, PC_LINE_INDEX+1, WIN_REG_WIDTH_2_3, ACS_PLUS);
+    mvwaddch(win_registers, PC_LINE_INDEX+1, WIN_REG_WIDTH, ACS_RTEE);
 
+    const int X_LINE_INDEX = 3;
+    sprintf(buff, " X: $%02x   |  Y: $%02x   |  A: $%02x   |", cpu->x, cpu->y, cpu->a);
+    mvwaddstr(win_registers, X_LINE_INDEX, 2, buff);
+    mvwaddch( win_registers, X_LINE_INDEX, WIN_REG_WIDTH_1_3, ACS_VLINE);
+    mvwaddch( win_registers, X_LINE_INDEX, WIN_REG_WIDTH_2_3, ACS_VLINE);
+    mvwaddch( win_registers, X_LINE_INDEX, WIN_REG_WIDTH, ACS_VLINE);
 
-    sprintf(buff, " X: $%02x   |  Y: $%02x  |  A: $%02x  |", cpu->x, cpu->y, cpu->a);
-    mvwaddstr(win_registers, 3, 2, buff);
-    mvwaddch( win_registers, 3, WIN_REG_BORDER1, ACS_VLINE);
-    mvwaddch( win_registers, 3, WIN_REG_BORDER2, ACS_VLINE);
+    mvwaddch(win_registers, X_LINE_INDEX + 1, 0, ACS_LTEE);
+    mvwhline(win_registers, X_LINE_INDEX + 1, 1, ACS_HLINE, WIN_REG_WIDTH - 1);
+    mvwaddch(win_registers, X_LINE_INDEX + 1, WIN_REG_WIDTH_1_3, ACS_PLUS);
+    mvwaddch(win_registers, X_LINE_INDEX + 1, WIN_REG_WIDTH_2_3, ACS_PLUS);
+    mvwaddch(win_registers, X_LINE_INDEX + 1, WIN_REG_WIDTH, ACS_RTEE);
+
+    const int SP_LINE_INDEX = 5;
+    sprintf(buff, "SP: $%02x   | PD: $%02x   |           |", cpu->sp, cpu->pd);
+    mvwaddstr(win_registers, SP_LINE_INDEX, 2, buff);
+    mvwaddch( win_registers, SP_LINE_INDEX, WIN_REG_WIDTH_1_3, ACS_VLINE);
+    mvwaddch( win_registers, SP_LINE_INDEX, WIN_REG_WIDTH_2_3, ACS_VLINE);
+    mvwaddch( win_registers, SP_LINE_INDEX, WIN_REG_WIDTH, ACS_VLINE);
+
+    mvwaddch(win_registers, SP_LINE_INDEX+1, 0, ACS_LTEE);
+    mvwhline(win_registers, SP_LINE_INDEX+1, 1, ACS_HLINE, WIN_REG_WIDTH - 1);
+    mvwaddch(win_registers, SP_LINE_INDEX+1, WIN_REG_WIDTH_1_3, ACS_BTEE);
+    mvwaddch(win_registers, SP_LINE_INDEX+1, WIN_REG_WIDTH_2_3, ACS_BTEE);
+    mvwaddch(win_registers, SP_LINE_INDEX+1, WIN_REG_WIDTH, ACS_RTEE);
+    mvwaddch(win_registers, SP_LINE_INDEX+1, WIN_REG_WIDTH_1_4, ACS_TTEE);
+    mvwaddch(win_registers, SP_LINE_INDEX+1, WIN_REG_WIDTH_2_4, ACS_TTEE);
+    mvwaddch(win_registers, SP_LINE_INDEX+1, WIN_REG_WIDTH_3_4, ACS_TTEE);
+
+    const int P_LINE_INDEX = 7;
+    sprintf(buff, " N: %i  |  V: %i  |  _: %i  |  B: %i",
+        (cpu->p >> 7) & 0b1,
+        (cpu->p >> 6) & 0b1,
+        (cpu->p >> 5) & 0b1,
+        (cpu->p >> 4) & 0b1);
+    mvwaddstr(win_registers, P_LINE_INDEX, 2, buff);
+    mvwaddch( win_registers, P_LINE_INDEX, WIN_REG_WIDTH_1_4, ACS_VLINE);
+    mvwaddch( win_registers, P_LINE_INDEX, WIN_REG_WIDTH_2_4, ACS_VLINE);
+    mvwaddch( win_registers, P_LINE_INDEX, WIN_REG_WIDTH_3_4, ACS_VLINE);
+    mvwaddch( win_registers, P_LINE_INDEX, WIN_REG_WIDTH, ACS_VLINE);
+
+    mvwaddch(win_registers, P_LINE_INDEX+1, 0, ACS_LTEE);
+    mvwhline(win_registers, P_LINE_INDEX+1, 1, ACS_HLINE, WIN_REG_WIDTH - 1);
+    mvwaddch(win_registers, P_LINE_INDEX+1, WIN_REG_WIDTH_1_4, ACS_PLUS);
+    mvwaddch(win_registers, P_LINE_INDEX+1, WIN_REG_WIDTH_2_4, ACS_PLUS);
+    mvwaddch(win_registers, P_LINE_INDEX+1, WIN_REG_WIDTH_3_4, ACS_PLUS);
+    mvwaddch(win_registers, P_LINE_INDEX+1, WIN_REG_WIDTH, ACS_RTEE);
+
+    sprintf(buff, " D: %i  |  I: %i  |  Z: %i  |  C: %i",
+        (cpu->p >> 3) & 0b1,
+        (cpu->p >> 2) & 0b1,
+        (cpu->p >> 1) & 0b1,
+        (cpu->p >> 0) & 0b1);
+    mvwaddstr(win_registers, P_LINE_INDEX+2, 2, buff);
+    mvwaddch( win_registers, P_LINE_INDEX+2, WIN_REG_WIDTH_1_4, ACS_VLINE);
+    mvwaddch( win_registers, P_LINE_INDEX+2, WIN_REG_WIDTH_2_4, ACS_VLINE);
+    mvwaddch( win_registers, P_LINE_INDEX+2, WIN_REG_WIDTH_3_4, ACS_VLINE);
+    mvwaddch( win_registers, P_LINE_INDEX+2, WIN_REG_WIDTH, ACS_VLINE);
+
+    mvwaddch(win_registers, P_LINE_INDEX+3, 0, ACS_LTEE);
+    mvwhline(win_registers, P_LINE_INDEX+3, 1, ACS_HLINE, WIN_REG_WIDTH - 1);
+    mvwaddch(win_registers, P_LINE_INDEX+3, WIN_REG_WIDTH_1_4, ACS_BTEE);
+    mvwaddch(win_registers, P_LINE_INDEX+3, WIN_REG_WIDTH_2_4, ACS_BTEE);
+    mvwaddch(win_registers, P_LINE_INDEX+3, WIN_REG_WIDTH_3_4, ACS_BTEE);
+    mvwaddch(win_registers, P_LINE_INDEX+3, WIN_REG_WIDTH, ACS_RTEE);
 
     wrefresh(win_registers);
 }

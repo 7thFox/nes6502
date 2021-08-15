@@ -20,10 +20,10 @@ typedef struct {
     uint8_t ir;// Instruction Register
     uint8_t tcu;// Timing Control Unit
     uint16_t pc;
-    uint8_t s;
     uint8_t x;
     uint8_t y;
     uint8_t a;
+    uint8_t sp;
     uint8_t p;// Flags
 
     // internal states/registers
