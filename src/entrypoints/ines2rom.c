@@ -58,22 +58,23 @@ int main(int argc, char* argv[]) {
 
     fprintf(rom_prg, "4020:\n");
     fprintf(rom_prg, "# Converted from %s (PRG-ROM)\n", argv[1]);
-    for (int i = 0; i < 1000 * prg_size_val; i++){
+    for (int i = 0; i < 1024 * prg_size_val; i++){
         fread(buff, 1, 16, ines);
         for (int i = 0; i < 16; i++) {
             fprintf(rom_prg, "%02X ", buff[i]);
         }
-        fprintf(rom_prg, "# $%04x\n", i*16);
+        fprintf(rom_prg, "# $%04x\n", 0x4020 + i*16);
     }
 
-    fprintf(rom_chr, "%04X:\n", prg_size_val*0x4000+0x4020);
+    uint16_t chr_start = prg_size_val * 0x4000 + 0x4020;
+    fprintf(rom_chr, "%04X:\n", chr_start);
     fprintf(rom_chr, "# Converted from %s (CHR-ROM)\n", argv[1]);
-    for (int i = 0; i < 1000 * prg_size_val; i++){
+    for (int i = 0; i < 1024 * prg_size_val; i++){
         fread(buff, 1, 16, ines);
         for (int i = 0; i < 16; i++) {
             fprintf(rom_chr, "%02X ", buff[i]);
         }
-        fprintf(rom_chr, "# $%04x\n", i*16);
+        fprintf(rom_chr, "# $%04x\n", chr_start + i*16);
     }
 
     fclose(ines);
