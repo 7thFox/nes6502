@@ -58,6 +58,7 @@ void cpu_resb(Cpu6502 *c) {
     c->pc = (hi << 8) | lo;
     c->addr_bus = c->pc;
     c->tcu = 0;
+    c->bit_fields |= 0x1;
     c->on_next_clock = (void *(*)(void *))(_cpu_fetch_opcode);
     logf("Reset CPU. PC set to $%04x ($fffc: $%02x, $fffd: $%02x)\n", c->pc, lo, hi);
 }

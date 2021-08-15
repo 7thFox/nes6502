@@ -29,12 +29,15 @@ void mem_add_ram(MemoryMap *m, Ram *r, const char *name) {
 }
 
 MemoryBlock *mem_get_read_block(MemoryMap *m, memaddr addr) {
-    tracef("mem_get_read_block \n");
+    tracef("mem_get_read_block $%04x\n", addr);
     for (int i = 0; i < m->n_read_blocks; i++) {
         MemoryBlock *b = m->read_blocks + i;
+        tracef("use %s? (%04x-%04x) ", b->block_name, b->range_low, b->range_high);
         if (b->range_low <= addr && b->range_high >= addr) {
+            tracef("YES!\n");
             return b;
         }
+        tracef("no\n");
     }
     return 0;
 }
