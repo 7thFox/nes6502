@@ -18,21 +18,15 @@ int main(int argc, char* argv[]) {
     }
 
     fprintf(rom, "0000:\n");
-    // fwrite("0000:\n", 1, 6, rom);
+    fprintf(rom, "# Converted from %s\n", argv[1]);
     uint16_t label = 0;
     uint8_t buff[16];
-    // char strbuff[16];
     int n = fread(buff, 1, 16, bin);
     while (n > 0) {
         for (int i = 0; i < n; i++) {
             fprintf(rom, "%02X ", buff[i]);
-            // sprintf(strbuff, "%02X ", buff[i]);
-            // fwrite(strbuff, 1, 3, rom);
         }
         fprintf(rom, "# $%04x\n", label);
-        // sprintf(strbuff, "# $%04x\n", label);
-        // fwrite(strbuff, 1, 7, rom);
-
         label += n;
         n = fread(buff, 1, 16, bin);
     }

@@ -12,3 +12,6 @@ run-monitor: monitor
 
 bin2rom: bin
 	gcc src/entrypoints/bin2rom.c -o bin/bin2rom
+
+ines2rom: bin
+	gcc src/entrypoints/ines2rom.c -o bin/ines2rom
