@@ -1,10 +1,13 @@
 #include "headers/rom.h"
 
-uint8_t parse_byte(const char *contents, int *i, size_t l);
+#define uint unsigned int
+
+uint8_t parse_byte(const char *contents, uint *i);
 uint8_t get_char_value(char c);
-void remove_trivia(const char *contents, int *i, size_t l);
+void remove_trivia(const char *contents, uint *i, size_t l);
 
 bool rom_load(Rom *rom, const char *filepath) {
+    tracef("rom_load \n");
     rom->value = 0;
     FILE *f = fopen(filepath, "r");
     if (!f) {
@@ -18,37 +21,37 @@ bool rom_load(Rom *rom, const char *filepath) {
     fread(contents, 1, size, f);
     fclose(f);
 
-    if (size < 3) return false;
+    if (size < 5) return false;
 
     size_t cap = 255;
     rom->value = malloc(sizeof(uint8_t) * cap);
     rom->rom_size = 0;
 
-    int i = 0;
-    rom->map_offset = parse_byte(contents, &i, size) << 8;
-    rom->map_offset |= parse_byte(contents, &i, size);
+    uint i = 0;
+    rom->map_offset = parse_byte(contents, &i) << 8;
+    rom->map_offset |= parse_byte(contents, &i);
     if (contents[i] != ':') return false;
     i++;// :
 
     while (i < size) {
         remove_trivia(contents, &i, size);
-        if (i + 1 >= size) break;
+        if (i + 1u >= size) break;
 
         if (size >= cap) {
             cap += 255;
             rom->value = realloc(rom->value, sizeof(uint8_t) * cap);
         }
 
-        rom->value[rom->rom_size] = parse_byte(contents, &i, size);
+        rom->value[rom->rom_size] = parse_byte(contents, &i);
         rom->rom_size++;
     }
 
-    logf("Successfully loaded ROM '%s' with %i bytes ($%04x-$%04x)\n", filepath, rom->rom_size, rom->map_offset, rom->map_offset + rom->rom_size - 1);
+    logf("Successfully loaded ROM '%s' with %li bytes ($%04x-$%04lx)\n", filepath, rom->rom_size, rom->map_offset, rom->map_offset + rom->rom_size - 1);
 
     return true;
 }
 
-uint8_t parse_byte(const char *contents, int *i, size_t l) {
+uint8_t parse_byte(const char *contents, uint *i) {
     char c = contents[*i];
     (*i)++;
 
@@ -68,7 +71,7 @@ uint8_t get_char_value(char c) {
     return 0;
 }
 
-void remove_trivia(const char *contents, int *i, size_t l) {
+void remove_trivia(const char *contents, uint *i, size_t l) {
     while (*i < l) {
         switch (contents[*i])
         {

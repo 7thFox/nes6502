@@ -45,6 +45,6 @@ typedef struct {
 void cpu_pulse(Cpu6502 *c);
 void cpu_resb(Cpu6502 *c);
 
-static inline bool cpu_is_read(Cpu6502 *c) { return c->bit_fields & (1 << 0) == (1 << 0); }
+static inline bool cpu_is_read(Cpu6502 *c) { return (c->bit_fields & (1 << 0)) == (1 << 0); }
 
 #endif

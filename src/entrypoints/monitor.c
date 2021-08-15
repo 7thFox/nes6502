@@ -1,4 +1,4 @@
-#include "execinfo.h"
+
 #include "stdio.h"
 #include "signal.h"
 #include "ncurses.h"
@@ -10,40 +10,20 @@
 
 #define NES_MODE 1
 
-void sig_err(int code) {
-    endwin();
-
-    const size_t BT_BUFFER_SIZE = 255;
-    void *bt[BT_BUFFER_SIZE];
-    int nbt = backtrace(bt, BT_BUFFER_SIZE);
-    char **symbols = backtrace_symbols(bt, BT_BUFFER_SIZE);
-    printf("Stack Trace:\n");
-    // Skipping first frame (error_common) + 1 (calling error function)
-    for (int i = 0; i < nbt; i++)
-    {
-        printf("\t%s\n", symbols[i]);
-    }
-    free(symbols);
-    exit(EXIT_FAILURE);
-}
-
 // const char *ROM_FILE = "./example/scratch.rom";
 // const char *ROM_FILE = "./example/klaus2m5_functional_test.rom";
 const char *ROM_FILE = "./example/nestest-prg.rom";
 
-void int_handle(int sig);
+void ncurses_cleanup() {
+    endwin();
+}
 void run_monitor(Cpu6502 *cpu);
-FILE *log_file = 0;
 
 int main() {
-    signal(SIGSEGV, sig_err);
+    if (!init_logging("monitor.log")) exit(EXIT_FAILURE);
+    tracef("main \n");
 
-    if (!(log_file = fopen("monitor.log", "w+")))
-    {
-        fprintf(stderr, "Failed to open log file");
-        return 1;
-    }
-
+    enable_stacktrace();
 
     MemoryMap mem;
     mem.n_read_blocks = 0;
@@ -81,13 +61,8 @@ int main() {
     cpu.addr_bus = rom.map_offset;
     cpu_resb(&cpu);
 
-    signal(SIGINT, int_handle);
+    signal(SIGINT, ncurses_cleanup);
     run_monitor(&cpu);
-}
-
-void int_handle(int sig) {
-    endwin();
-    if (log_file) fclose(log_file);
 }
 
 void draw(Cpu6502 *cpu);
@@ -203,7 +178,7 @@ void draw_mem_block(MemoryBlock *b, memaddr addr, bool read) {
         mvwaddstr(win_current_mem_block, 0, 2, b->block_name);
         wattroff(win_current_mem_block, COLOR_PAIR(COLOR_NAME));
 
-        memaddr addr_start = addr & 0xFF00 - 0x100;
+        memaddr addr_start = (addr & 0xFF00) - 0x100;
         if (addr_start < b->range_low) addr_start = b->range_low & 0xFFF0;
 
         int val_start = 0;
@@ -232,6 +207,9 @@ void draw_mem_block(MemoryBlock *b, memaddr addr, bool read) {
         wattroff(win_current_mem_block, COLOR_PAIR(COLOR_NAME));
     }
 
+    sprintf(fmt, " $%04x ", addr);
+    mvwaddstr(win_current_mem_block, 0, WIN_MEM_COLS - 9, fmt);
+
     wattron(win_current_mem_block, COLOR_PAIR(COLOR_FANCY));
     mvwaddstr(win_current_mem_block, 0, WIN_MEM_COLS - 1, read ? " R " : " W ");
     wattroff(win_current_mem_block, COLOR_PAIR(COLOR_FANCY));
@@ -251,7 +229,6 @@ void draw_instructions(MemoryBlock *b, memaddr pc) {
         uint16_t alignment_addr = disasm_get_alignment(disassembler, pc, WIN_INST_LINES - 1);
         if (alignment_addr < b->range_low) alignment_addr = b->range_low;
         uint16_t offset = alignment_addr - b->range_low;
-        uint8_t *a = b->values + offset;
         Disassembly dis = disasm(disassembler, b->values + offset, b->range_high - alignment_addr, WIN_INST_LINES);
         for (int i = 0; i < dis.count; i++)
         {

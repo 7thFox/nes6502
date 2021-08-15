@@ -28,6 +28,7 @@
         "stack": "c",
         "unordered_map": "c",
         "unordered_set": "c",
-        "vector": "c"
+        "vector": "c",
+        "cstdlib": "c"
     }
 }
