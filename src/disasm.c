@@ -73,15 +73,15 @@ Disassembler *create_disassembler() {
     return d;
 }
 
-Disassembly disasm(Disassembler* d, uint8_t *data_aligned, size_t data_size, int n) {
+Disassembly disasm(Disassembler* d, u8 *data_aligned, size_t data_size, int n) {
     if (n > N_MAX_DISASM) n = N_MAX_DISASM;
-    uint16_t iData = 0;
-    uint16_t iInst = 0;
+    u16 iData = 0;
+    u16 iInst = 0;
     while (iInst < n && iData < data_size) {
-        uint8_t opcode = data_aligned[iData];
-        uint8_t lo = iData + 1u < data_size ? data_aligned[iData+1] : 0;
-        uint8_t hi = iData + 2u < data_size ? data_aligned[iData+2] : 0;
-        uint16_t param16 = (hi << 8) | lo;
+        u8 opcode = data_aligned[iData];
+        u8 lo = iData + 1u < data_size ? data_aligned[iData+1] : 0;
+        u8 hi = iData + 2u < data_size ? data_aligned[iData+2] : 0;
+        u16 param16 = (hi << 8) | lo;
         InstructionMeta inst = INSTRUCTIONS[opcode];
 
         d->_disasm_offsets[iInst] = iData;
@@ -154,7 +154,7 @@ Disassembly disasm(Disassembler* d, uint8_t *data_aligned, size_t data_size, int
     // return (Disassembly){n, d->_disasm_text, d->_disasm_bytes};
 }
 
-uint16_t disasm_get_alignment(Disassembler *d, uint16_t offset, int backtrack) {
+u16 disasm_get_alignment(Disassembler *d, u16 offset, int backtrack) {
     // ignore warnings
     d = d;
     backtrack = backtrack;

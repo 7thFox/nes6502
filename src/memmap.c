@@ -53,13 +53,13 @@ MemoryBlock *mem_get_write_block(MemoryMap *m, memaddr addr) {
     return 0;
 }
 
-uint8_t mem_read_addr(MemoryMap *m, memaddr addr) {
+u8 mem_read_addr(MemoryMap *m, memaddr addr) {
     tracef("mem_read_addr \n");
     MemoryBlock *b = mem_get_read_block(m, addr);
     return b ? b->values[addr - b->range_low] : 0;
 }
 
-void mem_write_addr(MemoryMap *m, memaddr addr, uint8_t value) {
+void mem_write_addr(MemoryMap *m, memaddr addr, u8 value) {
     tracef("mem_write_addr \n");
     MemoryBlock *b = mem_get_write_block(m, addr);
     if (b) b->values[addr - b->range_low] = value;

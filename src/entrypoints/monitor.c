@@ -75,7 +75,7 @@ void draw_mem_block(MemoryBlock *b, memaddr addr, bool read);
 int WIN_INST_LINES;
 int WIN_INST_COLS;
 WINDOW *win_instructions;
-void draw_instructions(MemoryBlock *b, uint16_t pc);
+void draw_instructions(MemoryBlock *b, u16 pc);
 Disassembler *disassembler;
 int WIN_REG_LINES;
 // #define WIN_REG_BORDER1 12
@@ -226,14 +226,14 @@ void draw_instructions(MemoryBlock *b, memaddr pc) {
     {
         char addr_buff[8];
 
-        uint16_t alignment_addr = disasm_get_alignment(disassembler, pc, WIN_INST_LINES - 1);
+        u16 alignment_addr = disasm_get_alignment(disassembler, pc, WIN_INST_LINES - 1);
         if (alignment_addr < b->range_low) alignment_addr = b->range_low;
-        uint16_t offset = alignment_addr - b->range_low;
+        u16 offset = alignment_addr - b->range_low;
         Disassembly dis = disasm(disassembler, b->values + offset, b->range_high - alignment_addr, WIN_INST_LINES);
         for (int i = 0; i < dis.count; i++)
         {
             wattron(win_instructions, COLOR_PAIR(COLOR_ADDRESS_LABEL));
-            uint16_t addr = dis.offsets[i] + alignment_addr;
+            u16 addr = dis.offsets[i] + alignment_addr;
             sprintf(addr_buff, "$%04x: ", addr);
             mvwaddstr(win_instructions, 1 + i, 2, addr_buff);
             wattroff(win_instructions, COLOR_PAIR(COLOR_ADDRESS_LABEL));

@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
     //     return 1;
     // }
 
-    uint8_t header[16];
+    u8 header[16];
     if (fread(header, 1, 16, ines) != 16) {
         fprintf(stderr, "Could not read 16 byte header\n");
         return 1;
@@ -52,26 +52,26 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    uint8_t prg_size_val = header[4];
-    uint8_t chr_size_val = header[5];
+    u8 prg_size_val = header[4];
+    u8 chr_size_val = header[5];
 
-    uint8_t flags6 = header[6];
+    u8 flags6 = header[6];
     PPUMirroring mirroring = flags6 & 0x01;
     bool hasCartridgeRAM = (flags6 & 0x02) == 0x02;
     bool hasTrainer = (flags6 & 0x04) == 0x04;
     if ((flags6 & 0x08) == 0x08) mirroring = M_FOUR_SCREEN;
-    uint8_t mapper = (flags6 >> 4);
+    u8 mapper = (flags6 >> 4);
 
-    uint8_t flags7 = header[7];
+    u8 flags7 = header[7];
     bool hasVSUnisystem = (flags7 & 0x01) == 0x01;
     bool hasPlayChoice10 = (flags7 & 0x02) == 0x02;
     bool isNES2 = ((flags7 & 0x0F) >> 2) == 2;
     mapper |= flags7 & 0xF0;
 
-    uint8_t prg_ram_size = header[8];
+    u8 prg_ram_size = header[8];
 
-    // uint8_t flags9 = header[9];
-    // uint8_t flags10 = header[10];
+    // u8 flags9 = header[9];
+    // u8 flags10 = header[10];
 
     printf("Read iNES header.\n");
     printf("    PRG ROM SIZE:  %i (%i)\n", prg_size_val, prg_size_val * 0x4000);
@@ -103,7 +103,7 @@ int main(int argc, char* argv[]) {
 
     // I don't look at or support flags because the 1 file I need doesn't use them.
 
-    uint8_t buff[16];
+    u8 buff[16];
 
     fprintf(rom_prg, "8000:\n");
     fprintf(rom_prg, "# Converted from %s (PRG-ROM)\n", argv[1]);
@@ -128,7 +128,7 @@ int main(int argc, char* argv[]) {
     }
 
     // no CHR ROM
-    // uint16_t chr_start = prg_size_val * 0x4000 + 0x4020;
+    // u16 chr_start = prg_size_val * 0x4000 + 0x4020;
     // fprintf(rom_chr, "%04X:\n", chr_start);
     // fprintf(rom_chr, "# Converted from %s (CHR-ROM)\n", argv[1]);
     // for (int i = 0; i < 1024 * prg_size_val; i++){

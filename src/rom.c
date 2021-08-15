@@ -2,8 +2,8 @@
 
 #define uint unsigned int
 
-uint8_t parse_byte(const char *contents, uint *i);
-uint8_t get_char_value(char c);
+u8 parse_byte(const char *contents, uint *i);
+u8 get_char_value(char c);
 void remove_trivia(const char *contents, uint *i, size_t l);
 
 bool rom_load(Rom *rom, const char *filepath) {
@@ -24,7 +24,7 @@ bool rom_load(Rom *rom, const char *filepath) {
     if (size < 5) return false;
 
     size_t cap = 255;
-    rom->value = malloc(sizeof(uint8_t) * cap);
+    rom->value = malloc(sizeof(u8) * cap);
     rom->rom_size = 0;
 
     uint i = 0;
@@ -39,7 +39,7 @@ bool rom_load(Rom *rom, const char *filepath) {
 
         if (size >= cap) {
             cap += 255;
-            rom->value = realloc(rom->value, sizeof(uint8_t) * cap);
+            rom->value = realloc(rom->value, sizeof(u8) * cap);
         }
 
         rom->value[rom->rom_size] = parse_byte(contents, &i);
@@ -51,11 +51,11 @@ bool rom_load(Rom *rom, const char *filepath) {
     return true;
 }
 
-uint8_t parse_byte(const char *contents, uint *i) {
+u8 parse_byte(const char *contents, uint *i) {
     char c = contents[*i];
     (*i)++;
 
-    uint8_t val = get_char_value(c) << 4;
+    u8 val = get_char_value(c) << 4;
 
     c = contents[*i];
     (*i)++;
@@ -64,7 +64,7 @@ uint8_t parse_byte(const char *contents, uint *i) {
     return val;
 }
 
-uint8_t get_char_value(char c) {
+u8 get_char_value(char c) {
     if (c >= '0' && c <= '9') return c - '0';
     if (c >= 'A' && c <= 'F') return c - 'A' + 10;
     if (c >= 'a' && c <= 'f') return c - 'a' + 10;

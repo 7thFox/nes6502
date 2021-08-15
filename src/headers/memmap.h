@@ -1,19 +1,19 @@
 #ifndef MEMMAP_H
 #define MEMMAP_H
 
-#include "stdint.h"
 #include "stdio.h"
 
+#include "common.h"
 #include "rom.h"
 #include "ram.h"
 
-typedef uint16_t memaddr;
+typedef u16 memaddr;
 
 typedef struct {
     const char *block_name;
     memaddr range_low;
     memaddr range_high;
-    uint8_t *values;
+    u8 *values;
 } MemoryBlock;
 
 typedef struct {
@@ -30,7 +30,7 @@ void mem_add_ram(MemoryMap *m, Ram *r, const char *name);
 MemoryBlock *mem_get_read_block(MemoryMap *m, memaddr addr);
 MemoryBlock *mem_get_write_block(MemoryMap *m, memaddr addr);
 
-uint8_t mem_read_addr(MemoryMap *m, memaddr addr);
-void mem_write_addr(MemoryMap *m, memaddr addr, uint8_t value);
+u8 mem_read_addr(MemoryMap *m, memaddr addr);
+void mem_write_addr(MemoryMap *m, memaddr addr, u8 value);
 
 #endif

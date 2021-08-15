@@ -1,9 +1,8 @@
 #ifndef CPU6502_H
 #define CPU6502_H
 
-#include "stdint.h"
+#include "common.h"
 #include "memmap.h"
-#include "log.h"
 
 typedef enum {
     STAT_N_NEGATIVE     = 0x80,
@@ -17,26 +16,26 @@ typedef enum {
 } StatusFlags;
 
 typedef struct {
-    uint8_t ir;// Instruction Register
-    uint8_t tcu;// Timing Control Unit
-    uint16_t pc;
-    uint8_t x;
-    uint8_t y;
-    uint8_t a;
-    uint8_t sp;
-    uint8_t p;// Flags
+    u8 ir;// Instruction Register
+    u8 tcu;// Timing Control Unit
+    u16 pc;
+    u8 x;
+    u8 y;
+    u8 a;
+    u8 sp;
+    u8 p;// Flags
 
     // internal states/registers
-    uint8_t pd;
-    uint16_t addr_last_cycle;
+    u8 pd;
+    u16 addr_last_cycle;
 
     // 0 RW
     // 1 NMI
     // 2 IRQ
-    uint8_t bit_fields;
+    u8 bit_fields;
 
     memaddr addr_bus;
-    uint8_t data_bus;
+    u8 data_bus;
     MemoryMap *memmap;
 
     void* (*on_next_clock)(void*);

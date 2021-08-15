@@ -8,7 +8,7 @@
     else                      \
         unsetflag(p, f);
 
-void _cpu_update_p_flags(Cpu6502 *c, uint8_t val, StatusFlags f) {
+void _cpu_update_p_flags(Cpu6502 *c, u8 val, StatusFlags f) {
     if (f & STAT_N_NEGATIVE) {
         setunsetflag(c->p, STAT_N_NEGATIVE, val & 0x80);
     }
@@ -52,8 +52,8 @@ void cpu_resb(Cpu6502 *c) {
     unsetflag(c->p, STAT_D_DECIMAL);
     // we skip the whole 2-cycle set pc part (for now anyway)
     // by hacky coincidence, not defining this sets it to $0000 which is how I set up the rom for testing
-    uint8_t lo = mem_read_addr(c->memmap, 0xfffc);
-    uint8_t hi = mem_read_addr(c->memmap, 0xfffd);
+    u8 lo = mem_read_addr(c->memmap, 0xfffc);
+    u8 hi = mem_read_addr(c->memmap, 0xfffd);
     // c->pc = (hi << 8) | lo;
     c->pc = (hi << 8) | lo;
     c->addr_bus = c->pc;
@@ -113,7 +113,7 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                     return _cpu_fetch_hi;
                 case 4: // rel
                 {
-                    uint16_t pc_before = c->pc;
+                    u16 pc_before = c->pc;
                     switch (op_a)
                     {
                         case 0: // BPL

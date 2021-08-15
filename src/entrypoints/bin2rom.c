@@ -20,8 +20,8 @@ int main(int argc, char* argv[]) {
 
     fprintf(rom, "0000:\n");
     fprintf(rom, "# Converted from %s\n", argv[1]);
-    uint16_t label = 0;
-    uint8_t buff[16];
+    u16 label = 0;
+    u8 buff[16];
     int n = fread(buff, 1, 16, bin);
     while (n > 0) {
         for (int i = 0; i < n; i++) {
