@@ -1,6 +1,7 @@
 #include "stdio.h"
 #include "stdint.h"
 
+// TODO: Create direct load as well instead of bin -> ascii -> bin
 int main(int argc, char* argv[]) {
     if (argc < 3) {
         fprintf(stderr, "Usage: bin2rom <src> <dest>\n");
