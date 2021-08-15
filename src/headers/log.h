@@ -7,37 +7,40 @@
 #define LOG_LEVEL_DEBUG 3
 #define LOG_LEVEL_TRACE 4
 
-// #define LOG_LEVEL LOG_LEVEL_TRACE
-#define LOG_LEVEL LOG_LEVEL_DEBUG
+#define LOG_LEVEL LOG_LEVEL_TRACE
+// #define LOG_LEVEL LOG_LEVEL_DEBUG
 
 #include "stdio.h"
 
 // Define and set in entrypoint
 extern FILE *log_file;
 
+// #define LOG_FILE_TO_USE stdout
+#define LOG_FILE_TO_USE log_file
+
 #if LOG_LEVEL >= LOG_LEVEL_NORMAL
 #define logf(...)              \
-    fprintf(log_file, "[INFO] ");   \
-    fprintf(log_file, __VA_ARGS__); \
-    fflush(log_file);
+    fprintf(LOG_FILE_TO_USE, "[INFO] ");   \
+    fprintf(LOG_FILE_TO_USE, __VA_ARGS__); \
+    fflush(LOG_FILE_TO_USE);
 #else
 #define logf(...) ;
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_DEBUG
 #define debugf(...)            \
-    fprintf(log_file, "[DEBUG] ");  \
-    fprintf(log_file, __VA_ARGS__); \
-    fflush(log_file);
+    fprintf(LOG_FILE_TO_USE, "[DEBUG] ");  \
+    fprintf(LOG_FILE_TO_USE, __VA_ARGS__); \
+    fflush(LOG_FILE_TO_USE);
 #else
 #define debugf(...) ;
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_TRACE
 #define tracef(...)            \
-    fprintf(log_file, "[TRACE] ");  \
-    fprintf(log_file, __VA_ARGS__); \
-    fflush(log_file);
+    fprintf(LOG_FILE_TO_USE, "[TRACE] ");  \
+    fprintf(LOG_FILE_TO_USE, __VA_ARGS__); \
+    fflush(LOG_FILE_TO_USE);
 #else
 #define tracef(...) ;
 #endif
