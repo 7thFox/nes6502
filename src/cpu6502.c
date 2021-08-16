@@ -381,5 +381,15 @@ void *_cpu_page_boundary(Cpu6502 *c) {
 }
 
 void *_cpu_read_addr_ind(Cpu6502 *c) {
+    c->addr_bus = c->pd << 8;
+    _cpu_read(c);
+    c->addr_bus |= c->pd;
+
+    if (c->ir == 0x6C) { // JMP ind
+        c->tcu = 0;
+        c->pc = c->addr_bus;
+        return _cpu_fetch_opcode;
+    }
+
     return c->on_next_clock;
 }
