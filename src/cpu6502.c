@@ -168,22 +168,28 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                     switch (op_a)
                     {
                         case 0: // CLC
+                            unsetflag(c->p, STAT_C_CARRY);
                             break;
                         case 1: // SEC
+                            setflag(c->p, STAT_C_CARRY);
                             break;
                         case 2: // CLI
+                            unsetflag(c->p, STAT_I_INTERRUPT);
                             break;
                         case 3: // SEI
                             setflag(c->p, STAT_I_INTERRUPT);
                             break;
                         case 4: // TYA
+                            c->a = c->y;
                             break;
                         case 5: // CLV
+                            unsetflag(c->p, STAT_V_OVERFLOW);
                             break;
                         case 6: // CLD
                             unsetflag(c->p, STAT_D_DECIMAL);
                             break;
                         case 7: // SED
+                            setflag(c->p, STAT_D_DECIMAL);
                             break;
                     }
                     c->tcu = 0;
@@ -236,7 +242,36 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                 case 1: // zpg
                     break;
                 case 2: // impl
-                    break;
+                    switch (op_a)
+                    {
+                        case 0: // ASL
+                            c->a <<= 1;
+                            break;
+                        case 1: // ROL
+                            c->a = (c->a << 1) | (c->a >> 7);
+                            break;
+                        case 2: // LSR
+                            c->a >>= 1;
+                            break;
+                        case 3: // ROR
+                            c->a = (c->a >> 1) | (c->a << 7);
+                            break;
+                        case 4: // TXA
+                            c->a = c->x;
+                            break;
+                        case 5: // TAX
+                            c->x = c->a;
+                            break;
+                        case 6: // DEX
+                            c->x--;
+                            break;
+                        case 7: // NOP
+                            break;
+                    }
+                    c->tcu = 0;
+                    c->pc++;
+                    c->addr_bus = c->pc;
+                    return _cpu_fetch_opcode;
                 case 3: // abs
                     c->addr_bus++;
                     return _cpu_fetch_hi;
