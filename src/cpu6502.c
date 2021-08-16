@@ -20,18 +20,14 @@ void _cpu_update_p_flags(Cpu6502 *c, u8 val, StatusFlags f) {
     }
 }
 
-void _cpu_read(Cpu6502 *c) {
-    c->pd = mem_read_addr(c->memmap, c->addr_last_cycle);
-}
-
 void *_cpu_fetch_opcode(Cpu6502 *c);
 void *_cpu_fetch_lo(Cpu6502 *c);
 void *_cpu_fetch_hi(Cpu6502 *c);
 void *_cpu_read_addr(Cpu6502 *c);
 void *_cpu_page_boundary(Cpu6502 *c);
 void *_cpu_read_addr_ind(Cpu6502 *c);
-// void *_cpu_fetch(Cpu6502 *c);
-// void *_cpu_fetch(Cpu6502 *c);
+void *_cpu_push(Cpu6502 *c);
+void *_cpu_pop(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
@@ -41,9 +37,17 @@ void *_cpu_read_addr_ind(Cpu6502 *c);
 
 void cpu_pulse(Cpu6502 *c) {
     tracef("cpu_pulse \n");
+
     c->tcu++;
-    c->addr_last_cycle = c->addr_bus;
+    if ((c->bit_fields & PIN_READ) == PIN_READ) {
+        c->data_bus = mem_read_addr(c->memmap, c->addr_bus);
+    } else {
+        mem_write_addr(c->memmap, c->addr_bus, c->data_bus);
+    }
+
     c->on_next_clock = (c->on_next_clock)(c);
+
+    c->pd = c->data_bus;
 }
 
 void cpu_resb(Cpu6502 *c) {
@@ -54,24 +58,21 @@ void cpu_resb(Cpu6502 *c) {
     // by hacky coincidence, not defining this sets it to $0000 which is how I set up the rom for testing
     u8 lo = mem_read_addr(c->memmap, 0xfffc);
     u8 hi = mem_read_addr(c->memmap, 0xfffd);
-    // c->pc = (hi << 8) | lo;
     c->pc = (hi << 8) | lo;
     c->addr_bus = c->pc;
     c->tcu = 0;
-    c->bit_fields |= 0x1;
+    setflag(c->bit_fields, PIN_READ);
     c->on_next_clock = (void *(*)(void *))(_cpu_fetch_opcode);
     logf("Reset CPU. PC set to $%04x ($fffc: $%02x, $fffd: $%02x)\n", c->pc, lo, hi);
 }
 
 void* _cpu_fetch_opcode(Cpu6502 *c) {
-    _cpu_read(c);
-    c->ir = c->pd;
+    c->ir = c->data_bus;
     c->addr_bus++;
     return _cpu_fetch_lo;
 }
 
 void* _cpu_fetch_lo(Cpu6502 *c) {
-    _cpu_read(c);
     int op_a = (c->ir & 0b11100000) >> 5;
     int op_b = (c->ir & 0b00011100) >> 2;
     int op_c = (c->ir & 0b00000011) >> 0;
@@ -93,12 +94,30 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                     switch (op_a)
                     {
                         case 0: // PHP
+                            c->addr_bus = c->sp;
+                            c->data_bus = c->p | STAT_B_BREAK | STAT___IGNORE;
+                            unsetflag(c->bit_fields, PIN_READ);
+                            return _cpu_push;
                         case 1: // PLP
+                            c->addr_bus = c->sp;
+                            return _cpu_read_addr;
                         case 2: // PHA
+                            c->addr_bus = c->sp;
+                            c->data_bus = c->a;
+                            unsetflag(c->bit_fields, PIN_READ);
+                            return _cpu_push;
                         case 3: // PLA
+                            c->addr_bus = c->sp;
+                            return _cpu_read_addr;
                         case 4: // DEY
+                            c->y--;
+                            break;
                         case 5: // TAY
+                            c->y = c->a;
+                            break;
                         case 6: // INY
+                            c->y++;
+                            break;
                         case 7: // INX
                             c->x++;
                             _cpu_update_p_flags(c, c->x, STAT_N_NEGATIVE | STAT_Z_ZERO);
@@ -118,7 +137,7 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                     {
                         case 0: // BPL
                             if ((c->p & STAT_N_NEGATIVE) == 0) {
-                                c->pc += c->pd;
+                                c->pc += c->data_bus;
                             }
                             break;
                         case 1: // BMI
@@ -206,7 +225,7 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
             {
                 case 0: // imm
                     if (op_a == 5) { // LDX
-                        c->x = c->pd;
+                        c->x = c->data_bus;
                         c->tcu = 0;
                         c->pc += 2;
                         c->addr_bus = c->pc;
@@ -248,9 +267,7 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
 }
 
 void* _cpu_fetch_hi(Cpu6502 *c) {
-    c->addr_bus = c->pd;
-    _cpu_read(c);
-    c->addr_bus |= c->pd << 8;
+    c->addr_bus = c->pd | (c->data_bus << 8);
 
     // int op_a = (c->ir & 0b11100000) >> 5;
     int op_b = (c->ir & 0b00011100) >> 2;
@@ -276,8 +293,6 @@ void* _cpu_fetch_hi(Cpu6502 *c) {
 }
 
 void *_cpu_read_addr(Cpu6502 *c) {
-    _cpu_read(c);
-
     int op_a = (c->ir & 0b11100000) >> 5;
     int op_b = (c->ir & 0b00011100) >> 2;
     int op_c = (c->ir & 0b00000011) >> 0;
@@ -285,9 +300,15 @@ void *_cpu_read_addr(Cpu6502 *c) {
     switch (op_c)
     {
         case 0:
-            if (c->ir == 0x6c) { // ind (JMP)
-                c->addr_bus++;
-                return _cpu_read_addr_ind;
+            switch (c->ir) {
+                case 0x28: // PLP
+                case 0x68: // PLA
+                    c->pd = c->data_bus;
+                    c->sp++;
+                    return _cpu_pop;
+                case 0x6C: // JMP ind
+                    c->addr_bus++;
+                    return _cpu_read_addr_ind;
             }
             break;
         case 1:
@@ -311,7 +332,7 @@ void *_cpu_read_addr(Cpu6502 *c) {
                 case 4: // STA
                     break;
                 case 5: // LDA
-                    c->a = c->pd;
+                    c->a = c->data_bus;
                     _cpu_update_p_flags(c, c->a, STAT_N_NEGATIVE | STAT_Z_ZERO);
                     break;
                 case 6: // CMP
@@ -348,7 +369,7 @@ void *_cpu_read_addr(Cpu6502 *c) {
                 case 4: // STX
                     break;
                 case 5: // LDX
-                    c->x = c->pd;
+                    c->x = c->data_bus;
                     _cpu_update_p_flags(c, c->x, STAT_N_NEGATIVE | STAT_Z_ZERO);
                     break;
                 case 6: // DEC
@@ -381,9 +402,7 @@ void *_cpu_page_boundary(Cpu6502 *c) {
 }
 
 void *_cpu_read_addr_ind(Cpu6502 *c) {
-    c->addr_bus = c->pd << 8;
-    _cpu_read(c);
-    c->addr_bus |= c->pd;
+    c->addr_bus = (c->pd << 8) | c->data_bus;
 
     if (c->ir == 0x6C) { // JMP ind
         c->tcu = 0;
@@ -392,4 +411,28 @@ void *_cpu_read_addr_ind(Cpu6502 *c) {
     }
 
     return c->on_next_clock;
+}
+
+void *_cpu_push(Cpu6502 *c) {
+    c->tcu = 0;
+    c->pc++;
+    c->addr_bus = c->pc;
+    c->sp--;
+    setflag(c->bit_fields, PIN_READ);
+    return _cpu_fetch_opcode;
+}
+
+void *_cpu_pop(Cpu6502 *c) {
+    switch (c->ir)
+    {
+        case 0x28: // PLP
+            c->p = c->pd;
+            unsetflag(c->p, STAT_B_BREAK);
+            unsetflag(c->p, STAT___IGNORE);
+            break;
+    }
+    c->pc++;
+    c->tcu = 0;
+    c->addr_bus = c->pc;
+    return _cpu_fetch_opcode;
 }

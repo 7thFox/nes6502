@@ -156,7 +156,7 @@ const int DOWN = 1 << 3;
 void box_draw(WINDOW *win, _box_intersects intersect, chtype ul, chtype ur, chtype ll, chtype lr);
 
 void draw(Cpu6502 *cpu) {
-    bool read = cpu_is_read(cpu);
+    bool read = (cpu->bit_fields & PIN_READ) == PIN_READ;
     draw_mem_block(
         read
             ? mem_get_read_block(cpu->memmap, cpu->addr_bus)
