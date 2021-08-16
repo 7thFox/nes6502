@@ -1,7 +1,5 @@
 #include "headers/rom.h"
 
-#define uint unsigned int
-
 u8 parse_byte(const char *contents, uint *i);
 u8 get_char_value(char c);
 void remove_trivia(const char *contents, uint *i, size_t l);

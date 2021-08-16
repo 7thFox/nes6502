@@ -28,6 +28,7 @@ int main() {
     MemoryMap mem;
     mem.n_read_blocks = 0;
     mem.n_write_blocks = 0;
+    mem._ppu = NULL;
 
     Rom rom;
     if (!rom_load(&rom, ROM_FILE)) {
@@ -54,6 +55,10 @@ int main() {
     ram.size = 0x0600;
     ram.value = malloc(ram.size);
     mem_add_ram(&mem, &ram, "RAM");
+
+    PPURegisters ppu;
+    ppu.status = 0x02;// just to make sure I can actually read from here
+    mem_add_ppu(&mem, &ppu);
 #endif
 
     Cpu6502 cpu;
