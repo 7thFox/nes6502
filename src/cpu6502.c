@@ -81,6 +81,11 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
     // tracef("_cpu_fetch_lo ir: $%02X (a: %i b: %i c: %i) lo: $%02X (%i) \n",
     //                           c->ir, op_a, op_b, op_c,        lo,  lo);
 
+    if (op_b == 1) { // zpg
+        c->addr_bus = c->data_bus;
+        return _cpu_read_addr;
+    }
+
     switch (op_c)
     {
         case 0:
@@ -88,8 +93,6 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
             switch (op_b)
             {
                 case 0:
-                    break;
-                case 1: // zpg
                     break;
                 case 2: // impl
                     switch (op_a)
@@ -208,8 +211,6 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
             {
                 case 0: // X,ind
                     break;
-                case 1: // zpg
-                    break;
                 case 2: // imm
                     break;
                 case 3: // abs
@@ -237,8 +238,6 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                         _cpu_update_p_flags(c, c->x, STAT_N_NEGATIVE | STAT_Z_ZERO);
                         return _cpu_fetch_opcode;
                     }
-                    break;
-                case 1: // zpg
                     break;
                 case 2: // impl
                     switch (op_a)
@@ -487,5 +486,6 @@ void *_cpu_pop(Cpu6502 *c) {
 }
 
 void *_cpu_page_boundray(Cpu6502 *c) {
+    c = c;
     return _cpu_read_addr;
 }
