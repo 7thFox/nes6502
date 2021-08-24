@@ -28,6 +28,7 @@ void *_cpu_page_boundary(Cpu6502 *c);
 void *_cpu_read_addr_ind(Cpu6502 *c);
 void *_cpu_push(Cpu6502 *c);
 void *_cpu_pop(Cpu6502 *c);
+void *_cpu_page_boundray(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
@@ -212,15 +213,13 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                 case 2: // imm
                     break;
                 case 3: // abs
+                case 6: // abs,Y
+                case 7: // abs,X
                     c->addr_bus++;
                     return _cpu_fetch_hi;
                 case 4: // ind,Y
                     break;
                 case 5: // zpg,X
-                    break;
-                case 6: // abs,Y
-                    break;
-                case 7: // abs,X
                     break;
             }
             break;
@@ -273,6 +272,7 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                     c->addr_bus = c->pc;
                     return _cpu_fetch_opcode;
                 case 3: // abs
+                case 7: // abs,X
                     c->addr_bus++;
                     return _cpu_fetch_hi;
                 //   4
@@ -291,8 +291,6 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                     c->pc++;
                     c->addr_bus = c->pc;
                     return _cpu_fetch_opcode;
-                case 7: // abs,X
-                    break;
             }
             break;
         }
@@ -308,13 +306,19 @@ void* _cpu_fetch_hi(Cpu6502 *c) {
     int op_b = (c->ir & 0b00011100) >> 2;
     // int op_c = (c->ir & 0b00000011) >> 0;
 
-
+    memaddr addr_no_add = c->addr_bus;
     switch (op_b)
     {
         // case 3: // abs
         case 6: // abs,Y
+             c->addr_bus += c->y;
             break;
         case 7: // abs,X
+            if (c->ir == 0xBE) {// LDX abs,Y
+                c->addr_bus += c->y;
+                break;
+            }
+             c->addr_bus += c->x;
             break;
     }
 
@@ -322,6 +326,10 @@ void* _cpu_fetch_hi(Cpu6502 *c) {
         c->pc = c->addr_bus;
         c->tcu = 0;
         return _cpu_fetch_opcode;
+    }
+
+    if ((addr_no_add & 0xFF00) != (c->addr_bus & 0xFF00)) {
+        return _cpu_page_boundray;
     }
 
     return _cpu_read_addr;
@@ -344,6 +352,12 @@ void *_cpu_read_addr(Cpu6502 *c) {
                 case 0x6C: // JMP ind
                     c->addr_bus++;
                     return _cpu_read_addr_ind;
+                case 0xBC: // LDY abs,X
+                    c->y = c->data_bus;
+                    c->tcu = 0;
+                    c->pc += 3;
+                    c->addr_bus = c->pc;
+                    return _cpu_fetch_opcode;
             }
             break;
         case 1:
@@ -419,7 +433,7 @@ void *_cpu_read_addr(Cpu6502 *c) {
                     c->pc += 2;
                     break;
                 case 3: // abs
-                case 7: // abs,X
+                case 7: // abs,X (abs, Y)
                     c->pc += 3;
                     break;
             }
@@ -470,4 +484,8 @@ void *_cpu_pop(Cpu6502 *c) {
     c->tcu = 0;
     c->addr_bus = c->pc;
     return _cpu_fetch_opcode;
+}
+
+void *_cpu_page_boundray(Cpu6502 *c) {
+    return _cpu_read_addr;
 }
