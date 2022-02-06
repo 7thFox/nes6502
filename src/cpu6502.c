@@ -106,7 +106,7 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                             break;
                     }
                     c->tcu = 0;
-                    c->pc++;
+                    c->pc+= 2;
                     c->addr_bus = c->pc;
                     return _cpu_fetch_opcode;
                 case 2: // impl
