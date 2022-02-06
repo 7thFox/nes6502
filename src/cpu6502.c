@@ -22,7 +22,7 @@ void *_cpu_read_addr_ind(Cpu6502 *c);
 void *_cpu_push(Cpu6502 *c);
 void *_cpu_pop(Cpu6502 *c);
 void *_cpu_page_boundray(Cpu6502 *c);
-// void *_cpu_fetch(Cpu6502 *c);
+void *_cpu_write_then_fetch_add3(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
@@ -334,14 +334,15 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
 void* _cpu_fetch_hi(Cpu6502 *c) {
     c->addr_bus = c->pd | (c->data_bus << 8);
 
-    // int op_a = (c->ir & 0b11100000) >> 5;
+    int op_a = (c->ir & 0b11100000) >> 5;
     int op_b = (c->ir & 0b00011100) >> 2;
-    // int op_c = (c->ir & 0b00000011) >> 0;
+    int op_c = (c->ir & 0b00000011) >> 0;
 
     memaddr addr_no_add = c->addr_bus;
     switch (op_b)
     {
         // case 3: // abs
+            // Do nothing
         case 6: // abs,Y
              c->addr_bus += c->y;
             break;
@@ -364,7 +365,27 @@ void* _cpu_fetch_hi(Cpu6502 *c) {
         return _cpu_page_boundray;
     }
 
-    return _cpu_read_addr;
+    if (op_a == 4) { // ST_
+        switch (op_c)
+        {
+            case 0:// STY
+                c->data_bus = c->y;
+                break;
+            case 1:// STA
+                c->data_bus = c->a;
+                break;
+            case 2:// STX
+                c->data_bus = c->x;
+                break;
+            case 3:// SAX, etc
+                break;
+        }
+
+        unsetflag(c->bit_fields, PIN_READ);// write
+        return _cpu_write_then_fetch_add3;
+    }
+
+    return _cpu_read_addr;// Fetch ADDR value and perform operation after read
 }
 
 void *_cpu_read_addr(Cpu6502 *c) {
@@ -403,14 +424,18 @@ void *_cpu_read_addr(Cpu6502 *c) {
             switch (op_a)
             {
                 case 0: // ORA
+                    c->a |= c->data_bus;
+                    _cpu_update_NZ_flags(c, c->a);
                     break;
                 case 1: // AND
+                    c->a &= c->data_bus;
+                    _cpu_update_NZ_flags(c, c->a);
                     break;
                 case 2: // EOR
+                    c->a ^= c->data_bus;
+                    _cpu_update_NZ_flags(c, c->a);
                     break;
                 case 3: // ADC
-                    break;
-                case 4: // STA
                     break;
                 case 5: // LDA
                     c->a = c->data_bus;
@@ -519,6 +544,13 @@ void *_cpu_pop(Cpu6502 *c) {
 }
 
 void *_cpu_page_boundray(Cpu6502 *c) {
-    c = c;
+    c = c;// ignore warning
     return _cpu_read_addr;
+}
+void *_cpu_write_then_fetch_add3(Cpu6502 *c) {
+    c->pc += 3;
+    c->tcu = 0;
+    c->addr_bus = c->pc;
+    setflag(c->bit_fields, PIN_READ);// read
+    return _cpu_fetch_opcode;
 }
