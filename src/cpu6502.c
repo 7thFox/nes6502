@@ -86,7 +86,29 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
             switch (op_b)
             {
                 case 0:
-                    break;
+                    switch (op_a)
+                    {
+                        case 0: // BRK
+                            break;
+                        case 1: // JSR abs
+                            break;
+                        case 2: // RTI
+                            break;
+                        case 3: // RTS
+                            break;
+                        case 5: // LDY
+                            c->y = c->data_bus;
+                            _cpu_update_NZ_flags(c, c->y);
+                            break;
+                        case 6: // CPY
+                            break;
+                        case 7: // CPX
+                            break;
+                    }
+                    c->tcu = 0;
+                    c->pc++;
+                    c->addr_bus = c->pc;
+                    return _cpu_fetch_opcode;
                 case 2: // impl
                     switch (op_a)
                     {

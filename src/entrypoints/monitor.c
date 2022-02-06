@@ -218,9 +218,6 @@ void draw_mem_block(MemoryBlock *b, memaddr addr, bool read) {
                     wattroff(win_current_mem_block, COLOR_PAIR(COLOR_ADDRESSED));
                 }
             }
-
-            // addr_start += WIN_MEM_BYTES_PER_LINE;
-            // val_start += WIN_MEM_BYTES_PER_LINE;
         }
     }
     else

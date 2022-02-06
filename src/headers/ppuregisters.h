@@ -5,7 +5,7 @@
 
 typedef struct {
     u8 controller;  // $2000 w
-    u8 mask;        // $2001 r
+    u8 mask;        // $2001 w
     u8 status;      // $2002 r
     u8 oam_address; // $2003 w
     u8 oam_data;    // $2004 rw

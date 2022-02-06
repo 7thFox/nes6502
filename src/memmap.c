@@ -84,6 +84,7 @@ void mem_write_addr(MemoryMap *m, memaddr addr, u8 value) {
         switch (addr % 0x08)
         {
             case 0: m->_ppu->controller = value; break;
+            case 1: m->_ppu->mask = value; break;
             case 3: m->_ppu->oam_address = value; break;
             case 4: m->_ppu->oam_data = value; break;
             case 5: m->_ppu->scroll = value; break;
