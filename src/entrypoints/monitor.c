@@ -134,7 +134,7 @@ void run_monitor(Cpu6502 *cpu) {
     WIN_REG_LINES = 11;
     win_registers = newwin(WIN_REG_LINES + 2, WIN_REG_COLS + 4, 0, WIN_MEM_COLS + WIN_INST_COLS + 6);
 
-    WIN_PPU_LINES = LINES - WIN_REG_LINES - 2;
+    WIN_PPU_LINES = LINES - WIN_REG_LINES - 1;
     win_ppu_registers = newwin(WIN_PPU_LINES + 2, WIN_PPU_COLS + 4, WIN_REG_LINES - 1, WIN_MEM_COLS + WIN_INST_COLS + 6);
 
     wrefresh(stdscr);

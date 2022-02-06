@@ -143,6 +143,9 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                             if ((c->p & STAT_N_NEGATIVE) == 0) {
                                 c->pc += c->data_bus;
                             }
+                            else {
+                                c->pc += 2;// next instruction
+                            }
                             break;
                         case 1: // BMI
                             break;
@@ -212,7 +215,29 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                 case 0: // X,ind
                     break;
                 case 2: // imm
-                    break;
+                    switch (op_a)
+                    {
+                        case 0: // ORA
+                            break;
+                        case 1: // AND
+                            break;
+                        case 2: // EOR
+                            break;
+                        case 3: // ADC
+                            break;
+                        case 5: // LDA
+                            c->a = c->data_bus;
+                            _cpu_update_p_flags(c, c->x, STAT_N_NEGATIVE | STAT_Z_ZERO);
+                            break;
+                        case 6: // CMP
+                            break;
+                        case 7: // SBC
+                            break;
+                    }
+                    c->tcu = 0;
+                    c->pc += 2;
+                    c->addr_bus = c->pc;
+                    return _cpu_fetch_opcode;
                 case 3: // abs
                 case 6: // abs,Y
                 case 7: // abs,X
