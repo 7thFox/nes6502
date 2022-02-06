@@ -223,6 +223,7 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                             c->a = ~(c->a);
                             // FALLTHROUGH!!!
                         case 3: // ADC
+                        {
                             u16 a1 = (u16)(c->a) + (u16)(c->data_bus) + (u16)((c->p & STAT_C_CARRY) == STAT_C_CARRY);
                             setunsetflag(c->p, STAT_C_CARRY, a1 > 0xFF);
                             setunsetflag(c->p, STAT_V_OVERFLOW,
@@ -231,20 +232,13 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                                 & 0x0080);
                             c->a = a1 & 0xFF;
                             break;
+                        }
                         case 5: // LDA
                             c->a = c->data_bus;
                             break;
                         case 6: // CMP
                             _cpu_update_NZ_flags(c, c->a - c->data_bus);
                             setunsetflag(c->p, STAT_C_CARRY, c->a >= c->data_bus);
-                            break;
-                            u16 a1 = (u16)(c->a) - (u16)(c->data_bus) - (u16)((c->p & STAT_C_CARRY) != STAT_C_CARRY);
-                            setunsetflag(c->p, STAT_C_CARRY, a1 > 0xFF);
-                            setunsetflag(c->p, STAT_V_OVERFLOW,
-                                  (~((u16)(c->a) ^ (u16)(c->data_bus)))
-                                & ((u16)(c->a) ^ a1)
-                                & 0x0080);
-                            c->a = a1 & 0xFF;
                             break;
                         }
                     _cpu_update_NZ_flags(c, c->a);
