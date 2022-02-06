@@ -8,16 +8,9 @@
     else                      \
         unsetflag(p, f);
 
-void _cpu_update_p_flags(Cpu6502 *c, u8 val, StatusFlags f) {
-    if (f & STAT_N_NEGATIVE) {
-        setunsetflag(c->p, STAT_N_NEGATIVE, val & 0x80);
-    }
-    if (f & STAT_V_OVERFLOW) {
-        setunsetflag(c->p, STAT_V_OVERFLOW, val & 0x80);
-    }
-    if (f & STAT_Z_ZERO) {
-        setunsetflag(c->p, STAT_Z_ZERO, val == 0x00);
-    }
+void _cpu_update_NZ_flags(Cpu6502 *c, u8 val) {
+    setunsetflag(c->p, STAT_N_NEGATIVE, val & 0x80);
+    setunsetflag(c->p, STAT_Z_ZERO, val == 0x00);
 }
 
 void *_cpu_fetch_opcode(Cpu6502 *c);
@@ -124,7 +117,7 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                             break;
                         case 7: // INX
                             c->x++;
-                            _cpu_update_p_flags(c, c->x, STAT_N_NEGATIVE | STAT_Z_ZERO);
+                            _cpu_update_NZ_flags(c, c->x);
                             break;
                     }
                     c->tcu = 0;
@@ -218,22 +211,43 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                     switch (op_a)
                     {
                         case 0: // ORA
+                            c->a |= c->data_bus;
                             break;
                         case 1: // AND
+                            c->a &= c->data_bus;
                             break;
                         case 2: // EOR
+                            c->a ^= c->data_bus;
                             break;
+                        case 7: // SBC
+                            c->a = ~(c->a);
+                            // FALLTHROUGH!!!
                         case 3: // ADC
+                            u16 a1 = (u16)(c->a) + (u16)(c->data_bus) + (u16)((c->p & STAT_C_CARRY) == STAT_C_CARRY);
+                            setunsetflag(c->p, STAT_C_CARRY, a1 > 0xFF);
+                            setunsetflag(c->p, STAT_V_OVERFLOW,
+                                  (~((u16)(c->a) ^ (u16)(c->data_bus)))
+                                & ((u16)(c->a) ^ a1)
+                                & 0x0080);
+                            c->a = a1 & 0xFF;
                             break;
                         case 5: // LDA
                             c->a = c->data_bus;
-                            _cpu_update_p_flags(c, c->x, STAT_N_NEGATIVE | STAT_Z_ZERO);
                             break;
                         case 6: // CMP
+                            _cpu_update_NZ_flags(c, c->a - c->data_bus);
+                            setunsetflag(c->p, STAT_C_CARRY, c->a >= c->data_bus);
                             break;
-                        case 7: // SBC
+                            u16 a1 = (u16)(c->a) - (u16)(c->data_bus) - (u16)((c->p & STAT_C_CARRY) != STAT_C_CARRY);
+                            setunsetflag(c->p, STAT_C_CARRY, a1 > 0xFF);
+                            setunsetflag(c->p, STAT_V_OVERFLOW,
+                                  (~((u16)(c->a) ^ (u16)(c->data_bus)))
+                                & ((u16)(c->a) ^ a1)
+                                & 0x0080);
+                            c->a = a1 & 0xFF;
                             break;
-                    }
+                        }
+                    _cpu_update_NZ_flags(c, c->a);
                     c->tcu = 0;
                     c->pc += 2;
                     c->addr_bus = c->pc;
@@ -260,7 +274,7 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                         c->tcu = 0;
                         c->pc += 2;
                         c->addr_bus = c->pc;
-                        _cpu_update_p_flags(c, c->x, STAT_N_NEGATIVE | STAT_Z_ZERO);
+                        _cpu_update_NZ_flags(c, c->x);
                         return _cpu_fetch_opcode;
                     }
                     break;
@@ -406,7 +420,7 @@ void *_cpu_read_addr(Cpu6502 *c) {
                     break;
                 case 5: // LDA
                     c->a = c->data_bus;
-                    _cpu_update_p_flags(c, c->a, STAT_N_NEGATIVE | STAT_Z_ZERO);
+                    _cpu_update_NZ_flags(c, c->a);
                     break;
                 case 6: // CMP
                     break;
@@ -443,7 +457,7 @@ void *_cpu_read_addr(Cpu6502 *c) {
                     break;
                 case 5: // LDX
                     c->x = c->data_bus;
-                    _cpu_update_p_flags(c, c->x, STAT_N_NEGATIVE | STAT_Z_ZERO);
+                    _cpu_update_NZ_flags(c, c->x);
                     break;
                 case 6: // DEC
                     break;
