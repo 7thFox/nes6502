@@ -147,8 +147,6 @@ void run_monitor(Cpu6502 *cpu) {
     wrefresh(stdscr);
     draw(cpu);
 
-    u16 lastpc = 0;
-
     char ch;
     while (1) {
 noredraw:
@@ -161,8 +159,8 @@ noredraw:
                 goto noredraw;
             }
 
-            timeout(cpu->pc == lastpc ? 0 : 250);
-            lastpc = cpu->pc;
+            // timeout(cpu->pc == lastpc ? 0 : 250);
+            timeout(0);
 
             ch = getch();
             if (ch == 0x03)
@@ -178,7 +176,10 @@ noredraw:
             }
 
             cpu_pulse(cpu);
-            draw(cpu);
+            if (cpu->tcu == 0)
+            {
+                draw(cpu);
+            }
         }
         else
         {
