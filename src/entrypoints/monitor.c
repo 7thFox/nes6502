@@ -1,6 +1,7 @@
 
 #include "stdio.h"
 #include "signal.h"
+#include "time.h"
 #include "ncurses.h"
 #include "execinfo.h"
 #include "../headers/log.h"
@@ -80,6 +81,10 @@ int main() {
 
 void draw(Cpu6502 *cpu);
 
+bool run_until_addr = false;
+u16 addr_to_stop;
+bool run_to_addr();
+
 int WIN_MEM_LINES;
 int WIN_MEM_BYTES_PER_LINE;
 int WIN_MEM_COLS;
@@ -142,22 +147,124 @@ void run_monitor(Cpu6502 *cpu) {
     wrefresh(stdscr);
     draw(cpu);
 
+    u16 lastpc = 0;
+
     char ch;
     while (1) {
 noredraw:
-        ch = getchar();
-        switch (ch)
+
+        if (run_until_addr)
         {
-        case 0x03:
-            raise(SIGINT);
-            return;
-        case ' ':
+            if (addr_to_stop == cpu->pc){
+                run_until_addr = false;
+                timeout(-1);
+                goto noredraw;
+            }
+
+            timeout(cpu->pc == lastpc ? 0 : 250);
+            lastpc = cpu->pc;
+
+            ch = getch();
+            if (ch == 0x03)
+            {
+                raise(SIGINT);
+                return;
+            }
+            if (ch == 0x1b) // ESC
+            {
+                run_until_addr = false;
+                timeout(-1);
+                goto noredraw;
+            }
+
             cpu_pulse(cpu);
-            break;
-        default:
-            goto noredraw;
+            draw(cpu);
         }
-        draw(cpu);
+        else
+        {
+            ch = getchar();
+            switch (ch)
+            {
+            case 0x03:
+                raise(SIGINT);
+                return;
+            case ' ':
+                cpu_pulse(cpu);
+                break;
+            case 'r':
+                if (!run_to_addr()) {
+                    raise(SIGINT);
+                    return;
+                }
+                break;
+            default:
+                goto noredraw;
+            }
+            draw(cpu);
+        }
+    }
+
+}
+
+bool run_to_addr() {
+    wrefresh(stdscr);
+    WINDOW *prompt = newwin(3, 32, 10, 10);
+    box(prompt, 0, 0);
+
+    mvwaddstr(prompt, 2, 2, " ESC ");
+    mvwaddstr(prompt, 2, 23, " ENTER ");
+    mvwaddstr(prompt, 1, 2, "Run until PC: $");
+    const int startloc = 17;
+    int i = 0;
+    addr_to_stop = 0;
+    while (1)
+    {
+        wrefresh(prompt);
+        char c = getchar();
+        switch (c)
+        {
+            case 0x1B:// ESC
+                return true;
+            case 0x03:
+                raise(SIGINT);
+                return false;
+            case 0x7F:
+                i--;
+                addr_to_stop >>= 4;
+                mvwaddch(prompt, 1, startloc + i, ' ');
+                wmove(prompt, 1, startloc + i);
+                break;
+            case '\r':
+            case '\n':
+                run_until_addr = i > 0;
+                return true;
+            default:
+                if (i < 4)
+                {
+                    if (c >= '0' && c <= '9')
+                    {
+                        i++;
+                        addr_to_stop <<= 4;
+                        addr_to_stop += c - '0';
+                        waddch(prompt, c);
+                    }
+                    else if (c >= 'A' && c <= 'F')
+                    {
+                        i++;
+                        addr_to_stop <<= 4;
+                        addr_to_stop += c - 'A' + 0xA;
+                        waddch(prompt, c);
+                    }
+                    else if (c >= 'a' && c <= 'f')
+                    {
+                        i++;
+                        addr_to_stop <<= 4;
+                        addr_to_stop += c - 'a' + 0xA;
+                        waddch(prompt, c);
+                    }
+                }
+                break;
+        }
     }
 }
 
