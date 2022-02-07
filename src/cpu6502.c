@@ -691,7 +691,7 @@ void *_cpu_read_rts_read_pchi(Cpu6502 *c) {
 
 void *_cpu_read_rts_fetch(Cpu6502 *c) {
     c->pc = (c->data_bus << 8) | c->pd;
-    c->addr_bus = c->pc + 1;// RST adds 1 to the pushed pc
+    c->addr_bus = c->pc + 1;// RTS adds 1 to the pushed pc
     c->tcu = 0;
     return _cpu_fetch_opcode;
 }
