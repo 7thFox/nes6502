@@ -1,10 +1,12 @@
 {
     "cSpell.words": [
-        "Xind",
         "debugf",
         "nblocks",
         "noredraw",
-        "resb"
+        "pchi",
+        "pclo",
+        "resb",
+        "Xind"
     ],
     "files.associations": {
         "cstddef": "c",

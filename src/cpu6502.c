@@ -25,9 +25,12 @@ void *_cpu_page_boundray(Cpu6502 *c);
 void *_cpu_write_then_fetch_add3(Cpu6502 *c);
 void *_cpu_write_brk_write_pclo(Cpu6502 *c);
 void *_cpu_write_brk_write_sr(Cpu6502 *c);
-void *_cpu_write_brk_fetch_pclo(Cpu6502 *c);
-void *_cpu_read_brk_fetch_pchi(Cpu6502 *c);
-void *_cpu_read_brk_fetch_opcode(Cpu6502 *c);
+void *_cpu_write_brk_read_pclo(Cpu6502 *c);
+void *_cpu_read_brk_read_pchi(Cpu6502 *c);
+void *_cpu_read_brk_fetch(Cpu6502 *c);
+void *_cpu_read_rti_read_pclo(Cpu6502 *c);
+void *_cpu_read_rti_read_pchi(Cpu6502 *c);
+void *_cpu_read_rti_fetch(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
@@ -101,11 +104,12 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                             unsetflag(c->bit_fields, PIN_READ);
                             return _cpu_write_brk_write_pclo;
                         case 1: // JSR abs
-                            // NOT IMPLEMENTED
-                            break;
+                            c->addr_bus++;
+                            return _cpu_fetch_hi;
                         case 2: // RTI
-                            // NOT IMPLEMENTED
-                            break;
+                            c->sp++;
+                            c->addr_bus = 0x0100 | c->sp;
+                            return _cpu_read_rti_read_pclo;
                         case 3: // RTS
                             // NOT IMPLEMENTED
                             break;
@@ -618,23 +622,40 @@ void *_cpu_write_brk_write_sr(Cpu6502 *c) {
     c->addr_bus = 0x0100 | c->sp;
     c->data_bus = c->p & STAT_B_BREAK;
     c->sp--;
-    return _cpu_write_brk_fetch_pclo;
+    return _cpu_write_brk_read_pclo;
 }
 
-void *_cpu_write_brk_fetch_pclo(Cpu6502 *c) {
+void *_cpu_write_brk_read_pclo(Cpu6502 *c) {
     c->addr_bus = 0xFFFE;
     setflag(c->bit_fields, PIN_READ);
-    return _cpu_read_brk_fetch_pchi;
+    return _cpu_write_brk_read_pclo;
 }
 
-void *_cpu_read_brk_fetch_pchi(Cpu6502 *c) {
-    c->pc = c->pd;
+void *_cpu_read_brk_read_pchi(Cpu6502 *c) {
     c->addr_bus = 0xFFFE;
     return _cpu_read_brk_fetch_opcode;
 }
 
 void *_cpu_read_brk_fetch_opcode(Cpu6502 *c) {
-    c->pc |= c->pd << 8;
+    c->pc = (c->data_bus << 8) | c->pd;
     c->addr_bus = c->pc;
+    return _cpu_fetch_opcode;
+}
+
+void *_cpu_read_rti_read_pclo(Cpu6502 *c) {;
+    c->sp++;
+    c->addr_bus = 0x0100 | c->sp;
+    return _cpu_read_rti_read_pchi;
+}
+
+void *_cpu_read_rti_read_pchi(Cpu6502 *c) {
+    c->pc = (c->data_bus << 8) | c->pd;
+    c->sp++;
+    c->addr_bus = 0x0100 | c->sp;
+    return _cpu_read_rti_fetch;
+}
+
+void *_cpu_read_rti_fetch(Cpu6502 *c) {
+    c->p = c->data_bus;
     return _cpu_fetch_opcode;
 }
