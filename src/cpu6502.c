@@ -119,7 +119,7 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                         case 3: // RTS
                             c->sp++;
                             c->addr_bus = 0x0100 | c->sp;
-                            return _cpu_read_rti_read_pclo;
+                            return _cpu_read_rts_read_pchi;
                             break;
                         case 5: // LDY
                             c->y = c->data_bus;
@@ -691,7 +691,8 @@ void *_cpu_read_rts_read_pchi(Cpu6502 *c) {
 
 void *_cpu_read_rts_fetch(Cpu6502 *c) {
     c->pc = (c->data_bus << 8) | c->pd;
-    c->addr_bus = c->pc + 1;// RTS adds 1 to the pushed pc
+    c->pc++; // RTS adds 1 to the pushed pc
+    c->addr_bus = c->pc;
     c->tcu = 0;
     return _cpu_fetch_opcode;
 }
