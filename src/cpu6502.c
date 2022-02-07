@@ -31,6 +31,8 @@ void *_cpu_read_brk_fetch(Cpu6502 *c);
 void *_cpu_read_rti_read_pclo(Cpu6502 *c);
 void *_cpu_read_rti_read_pchi(Cpu6502 *c);
 void *_cpu_read_rti_fetch(Cpu6502 *c);
+void *_cpu_read_rts_read_pchi(Cpu6502 *c);
+void *_cpu_read_rts_fetch(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
@@ -111,7 +113,9 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                             c->addr_bus = 0x0100 | c->sp;
                             return _cpu_read_rti_read_pclo;
                         case 3: // RTS
-                            // NOT IMPLEMENTED
+                            c->sp++;
+                            c->addr_bus = 0x0100 | c->sp;
+                            return _cpu_read_rti_read_pclo;
                             break;
                         case 5: // LDY
                             c->y = c->data_bus;
@@ -657,5 +661,18 @@ void *_cpu_read_rti_read_pchi(Cpu6502 *c) {
 
 void *_cpu_read_rti_fetch(Cpu6502 *c) {
     c->p = c->data_bus;
+    c->addr_bus = c->pc;
+    return _cpu_fetch_opcode;
+}
+
+void *_cpu_read_rts_read_pchi(Cpu6502 *c) {
+    c->sp++;
+    c->addr_bus = 0x0100 | c->sp;
+    return _cpu_read_rts_fetch;
+}
+
+void *_cpu_read_rts_fetch(Cpu6502 *c) {
+    c->pc = (c->data_bus << 8) | c->pd;
+    c->addr_bus = c->pc;
     return _cpu_fetch_opcode;
 }
