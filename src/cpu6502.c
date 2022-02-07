@@ -431,7 +431,7 @@ void* _cpu_fetch_hi(Cpu6502 *c) {
         c->jsr_juggle_addr_because_im_lazy = (c->data_bus << 8) | (c->pd);
         c->addr_bus = 0x0100 | c->sp;
         c->sp--;
-        c->data_bus = c->pc >> 8;
+        c->data_bus = (c->pc + 2) >> 8;
         unsetflag(c->bit_fields, PIN_READ);
         return _cpu_write_jsr_write_pclo;
     }
@@ -659,6 +659,7 @@ void *_cpu_read_brk_read_pchi(Cpu6502 *c) {
 void *_cpu_read_brk_fetch(Cpu6502 *c) {
     c->pc = (c->data_bus << 8) | c->pd;
     c->addr_bus = c->pc;
+    c->tcu = 0;
     return _cpu_fetch_opcode;
 }
 
@@ -678,6 +679,7 @@ void *_cpu_read_rti_read_pchi(Cpu6502 *c) {
 void *_cpu_read_rti_fetch(Cpu6502 *c) {
     c->p = c->data_bus;
     c->addr_bus = c->pc;
+    c->tcu = 0;
     return _cpu_fetch_opcode;
 }
 
@@ -690,6 +692,7 @@ void *_cpu_read_rts_read_pchi(Cpu6502 *c) {
 void *_cpu_read_rts_fetch(Cpu6502 *c) {
     c->pc = (c->data_bus << 8) | c->pd;
     c->addr_bus = c->pc;
+    c->tcu = 0;
     return _cpu_fetch_opcode;
 }
 
@@ -763,13 +766,14 @@ void *_cpu_write_zpg_fetch(Cpu6502 *c) {
 void *_cpu_write_jsr_write_pclo(Cpu6502 *c) {
     c->addr_bus = 0x0100 | c->sp;
     c->sp--;
-    c->data_bus = c->pc & 0xFF;
+    c->data_bus = (c->pc + 2) & 0xFF;
     return _cpu_write_jsr_fetch;
 }
 
 void *_cpu_write_jsr_fetch(Cpu6502 *c) {
     c->pc = c->jsr_juggle_addr_because_im_lazy;
     c->addr_bus = c->pc;
+    c->tcu = 0;
     setflag(c->bit_fields, PIN_READ);
     return _cpu_fetch_opcode;
 }
