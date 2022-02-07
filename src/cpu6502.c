@@ -33,6 +33,8 @@ void *_cpu_read_rti_read_pchi(Cpu6502 *c);
 void *_cpu_read_rti_fetch(Cpu6502 *c);
 void *_cpu_read_rts_read_pchi(Cpu6502 *c);
 void *_cpu_read_rts_fetch(Cpu6502 *c);
+void *_cpu_read_zpg(Cpu6502 *c);
+void *_cpu_write_zpg_fetch(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
@@ -331,6 +333,9 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                         return _cpu_fetch_opcode;
                     }
                     break;
+                case 1: // zpg
+                    c->addr_bus = c->data_bus;
+                    return _cpu_read_zpg;
                 case 2: // impl
                     switch (op_a)
                     {
@@ -674,5 +679,71 @@ void *_cpu_read_rts_read_pchi(Cpu6502 *c) {
 void *_cpu_read_rts_fetch(Cpu6502 *c) {
     c->pc = (c->data_bus << 8) | c->pd;
     c->addr_bus = c->pc;
+    return _cpu_fetch_opcode;
+}
+
+void *_cpu_read_zpg(Cpu6502 *c) {
+    int op_c = (c->ir & 0b00000011) >> 0;
+
+    switch (op_c)
+    {
+        case 0: // ASL
+        {
+            u8 carry = c->data_bus >> 7 & 0x01;
+            c->data_bus = c->data_bus << 1;
+            setunsetflag(c->p, STAT_C_CARRY, carry);
+            _cpu_update_NZ_flags(c->p, c->data_bus);
+            break;
+        }
+        case 1: // ROL
+        {
+            u8 carry = c->data_bus >> 7 & 0x01;
+            c->data_bus = (c->data_bus << 1) | carry;
+            setunsetflag(c->p, STAT_C_CARRY, carry);
+            _cpu_update_NZ_flags(c->p, c->data_bus);
+            break;
+        }
+        case 2: // LSR
+        {
+            u8 carry = c->data_bus & 0x01;
+            c->data_bus = c->data_bus >> 1;
+            setunsetflag(c->p, STAT_C_CARRY, carry);
+            _cpu_update_NZ_flags(c->p, c->data_bus);
+            break;
+        }
+        case 3: // ROR
+        {
+            u8 carry = c->data_bus & 0x01;
+            c->data_bus = (c->data_bus >> 1) | (carry << 7);
+            setunsetflag(c->p, STAT_C_CARRY, carry);
+            _cpu_update_NZ_flags(c->p, c->data_bus);
+            break;
+        }
+        case 4: // STX
+            c->data_bus = c->x;
+        case 5: // LDX
+            c->x = c->data_bus;
+            _cpu_update_NZ_flags(c->p, c->x);
+            return _cpu_write_zpg_fetch(c);// cuz I'm lazy
+        case 6: // DEC
+            c->data_bus--;
+            _cpu_update_NZ_flags(c->p, c->x);
+            break;
+        case 7: // INC
+            c->data_bus++;
+            _cpu_update_NZ_flags(c->p, c->x);
+            break;
+    }
+
+    // data_bus = data_bus;
+
+    return _cpu_write_zpg_fetch;
+}
+
+void *_cpu_write_zpg_fetch(Cpu6502 *c) {
+    c->pc += 2;
+    c->tcu = 0;
+    c->addr_bus = c->pc;
+    unsetflag(c->bit_fields, PIN_READ);
     return _cpu_fetch_opcode;
 }
