@@ -35,6 +35,8 @@ void *_cpu_read_rts_read_pchi(Cpu6502 *c);
 void *_cpu_read_rts_fetch(Cpu6502 *c);
 void *_cpu_read_zpg(Cpu6502 *c);
 void *_cpu_write_zpg_fetch(Cpu6502 *c);
+void *_cpu_write_jsr_write_pclo(Cpu6502 *c);
+void *_cpu_write_jsr_fetch(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
@@ -51,9 +53,9 @@ void cpu_pulse(Cpu6502 *c) {
         mem_write_addr(c->memmap, c->addr_bus, c->data_bus);
     }
 
+    u8 pd = c->data_bus;
     c->on_next_clock = (c->on_next_clock)(c);
-
-    c->pd = c->data_bus;
+    c->pd = pd;
 }
 
 void cpu_resb(Cpu6502 *c) {
@@ -425,6 +427,15 @@ void* _cpu_fetch_hi(Cpu6502 *c) {
         return _cpu_fetch_opcode;
     }
 
+    if (c->ir == 0x20) { // JSR
+        c->jsr_juggle_addr_because_im_lazy = (c->data_bus << 8) | (c->pd);
+        c->addr_bus = 0x0100 | c->sp;
+        c->sp--;
+        c->data_bus = c->pc >> 8;
+        unsetflag(c->bit_fields, PIN_READ);
+        return _cpu_write_jsr_write_pclo;
+    }
+
     if ((addr_no_add & 0xFF00) != (c->addr_bus & 0xFF00)) {
         return _cpu_page_boundray;
     }
@@ -642,10 +653,10 @@ void *_cpu_write_brk_read_pclo(Cpu6502 *c) {
 
 void *_cpu_read_brk_read_pchi(Cpu6502 *c) {
     c->addr_bus = 0xFFFE;
-    return _cpu_read_brk_fetch_opcode;
+    return _cpu_read_brk_fetch;
 }
 
-void *_cpu_read_brk_fetch_opcode(Cpu6502 *c) {
+void *_cpu_read_brk_fetch(Cpu6502 *c) {
     c->pc = (c->data_bus << 8) | c->pd;
     c->addr_bus = c->pc;
     return _cpu_fetch_opcode;
@@ -692,7 +703,7 @@ void *_cpu_read_zpg(Cpu6502 *c) {
             u8 carry = c->data_bus >> 7 & 0x01;
             c->data_bus = c->data_bus << 1;
             setunsetflag(c->p, STAT_C_CARRY, carry);
-            _cpu_update_NZ_flags(c->p, c->data_bus);
+            _cpu_update_NZ_flags(c, c->data_bus);
             break;
         }
         case 1: // ROL
@@ -700,7 +711,7 @@ void *_cpu_read_zpg(Cpu6502 *c) {
             u8 carry = c->data_bus >> 7 & 0x01;
             c->data_bus = (c->data_bus << 1) | carry;
             setunsetflag(c->p, STAT_C_CARRY, carry);
-            _cpu_update_NZ_flags(c->p, c->data_bus);
+            _cpu_update_NZ_flags(c, c->data_bus);
             break;
         }
         case 2: // LSR
@@ -708,7 +719,7 @@ void *_cpu_read_zpg(Cpu6502 *c) {
             u8 carry = c->data_bus & 0x01;
             c->data_bus = c->data_bus >> 1;
             setunsetflag(c->p, STAT_C_CARRY, carry);
-            _cpu_update_NZ_flags(c->p, c->data_bus);
+            _cpu_update_NZ_flags(c, c->data_bus);
             break;
         }
         case 3: // ROR
@@ -716,22 +727,23 @@ void *_cpu_read_zpg(Cpu6502 *c) {
             u8 carry = c->data_bus & 0x01;
             c->data_bus = (c->data_bus >> 1) | (carry << 7);
             setunsetflag(c->p, STAT_C_CARRY, carry);
-            _cpu_update_NZ_flags(c->p, c->data_bus);
+            _cpu_update_NZ_flags(c, c->data_bus);
             break;
         }
         case 4: // STX
             c->data_bus = c->x;
+            break;
         case 5: // LDX
             c->x = c->data_bus;
-            _cpu_update_NZ_flags(c->p, c->x);
+            _cpu_update_NZ_flags(c, c->x);
             return _cpu_write_zpg_fetch(c);// cuz I'm lazy
         case 6: // DEC
             c->data_bus--;
-            _cpu_update_NZ_flags(c->p, c->x);
+            _cpu_update_NZ_flags(c, c->x);
             break;
         case 7: // INC
             c->data_bus++;
-            _cpu_update_NZ_flags(c->p, c->x);
+            _cpu_update_NZ_flags(c, c->x);
             break;
     }
 
@@ -745,5 +757,19 @@ void *_cpu_write_zpg_fetch(Cpu6502 *c) {
     c->tcu = 0;
     c->addr_bus = c->pc;
     unsetflag(c->bit_fields, PIN_READ);
+    return _cpu_fetch_opcode;
+}
+
+void *_cpu_write_jsr_write_pclo(Cpu6502 *c) {
+    c->addr_bus = 0x0100 | c->sp;
+    c->sp--;
+    c->data_bus = c->pc & 0xFF;
+    return _cpu_write_jsr_fetch;
+}
+
+void *_cpu_write_jsr_fetch(Cpu6502 *c) {
+    c->pc = c->jsr_juggle_addr_because_im_lazy;
+    c->addr_bus = c->pc;
+    setflag(c->bit_fields, PIN_READ);
     return _cpu_fetch_opcode;
 }
