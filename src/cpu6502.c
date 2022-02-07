@@ -37,6 +37,8 @@ void *_cpu_read_zpg(Cpu6502 *c);
 void *_cpu_write_zpg_fetch(Cpu6502 *c);
 void *_cpu_write_jsr_write_pclo(Cpu6502 *c);
 void *_cpu_write_jsr_fetch(Cpu6502 *c);
+void *_cpu_read_ind_read_addrhi(Cpu6502 *c);
+void *_cpu_read_ind_read_val(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
@@ -269,7 +271,8 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
             switch (op_b)
             {
                 case 0: // X,ind
-                    break;
+                    c->addr_bus = (c->data_bus + c->x) & 0x00FF;// no carry
+                    return _cpu_read_ind_read_addrhi;
                 case 2: // imm
                     switch (op_a)
                     {
@@ -315,7 +318,8 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                     c->addr_bus++;
                     return _cpu_fetch_hi;
                 case 4: // ind,Y
-                    break;
+                    c->addr_bus = c->data_bus;
+                    return _cpu_read_ind_read_addrhi;
                 case 5: // zpg,X
                     break;
             }
@@ -489,13 +493,7 @@ void *_cpu_read_addr(Cpu6502 *c) {
             }
             break;
         case 1:
-            switch (op_b)
-            {
-                case 0: // X,ind
-                    break;
-                case 4: // ind,Y
-                    break;
-            }
+            // X,ind and ind,Y have already been decoded by this point
             switch (op_a)
             {
                 case 0: // ORA
@@ -523,7 +521,10 @@ void *_cpu_read_addr(Cpu6502 *c) {
             }
             switch (op_b)
             {
+                // case 2: imm
+                case 0: // X,ind
                 case 1: // zpg
+                case 4: // ind,Y
                 case 5: // zpg,X
                     c->pc += 2;
                     break;
@@ -777,4 +778,33 @@ void *_cpu_write_jsr_fetch(Cpu6502 *c) {
     c->tcu = 0;
     setflag(c->bit_fields, PIN_READ);
     return _cpu_fetch_opcode;
+}
+
+void *_cpu_read_ind_read_addrhi(Cpu6502 *c)
+{
+    int op_b = (c->ir & 0b00011100) >> 2;
+    if (op_b == 0) { // X,ind
+        c->addr_bus = (c->pd + c->x + 1) & 0x00FF;// without carry
+    }
+    else if (op_b == 4) { // ind,Y
+        c->addr_bus = (c->pd + 1) & 0xFF;
+    }
+    return _cpu_read_ind_read_val;
+}
+
+void *_cpu_read_ind_read_val(Cpu6502 *c) {
+    int op_b = (c->ir & 0b00011100) >> 2;
+    if (op_b == 0) { // X,ind
+        c->addr_bus = (c->data_bus << 8) | c->pd;
+    }
+    else if (op_b == 4) { // ind,Y
+        c->addr_bus = (c->data_bus + c->y);
+        u16 before = c->addr_bus;
+        c->addr_bus += c->y;
+        if ((c->addr_bus & 0xFF00) != (before & 0xFF00))
+        {
+            return _cpu_page_boundary;
+        }
+    }
+    return _cpu_read_addr;
 }
