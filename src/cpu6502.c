@@ -23,6 +23,11 @@ void *_cpu_push(Cpu6502 *c);
 void *_cpu_pop(Cpu6502 *c);
 void *_cpu_page_boundray(Cpu6502 *c);
 void *_cpu_write_then_fetch_add3(Cpu6502 *c);
+void *_cpu_write_brk_write_pclo(Cpu6502 *c);
+void *_cpu_write_brk_write_sr(Cpu6502 *c);
+void *_cpu_write_brk_fetch_pclo(Cpu6502 *c);
+void *_cpu_read_brk_fetch_pchi(Cpu6502 *c);
+void *_cpu_read_brk_fetch_opcode(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
 // void *_cpu_fetch(Cpu6502 *c);
@@ -89,26 +94,41 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                     switch (op_a)
                     {
                         case 0: // BRK
-                            break;
+                            c->addr_bus = 0x0100 | c->sp;
+                            c->data_bus = (c->pc + 2) >> 8;// pc hi
+                            c->sp--;
+                            setflag(c->p, STAT_I_INTERRUPT);
+                            unsetflag(c->bit_fields, PIN_READ);
+                            return _cpu_write_brk_write_pclo;
                         case 1: // JSR abs
+                            // NOT IMPLEMENTED
                             break;
                         case 2: // RTI
+                            // NOT IMPLEMENTED
                             break;
                         case 3: // RTS
+                            // NOT IMPLEMENTED
                             break;
                         case 5: // LDY
                             c->y = c->data_bus;
                             _cpu_update_NZ_flags(c, c->y);
                             break;
                         case 6: // CPY
+                            _cpu_update_NZ_flags(c, c->a - c->y);
+                            setunsetflag(c->p, STAT_C_CARRY, c->a >= c->y);
                             break;
                         case 7: // CPX
+                            _cpu_update_NZ_flags(c, c->a - c->x);
+                            setunsetflag(c->p, STAT_C_CARRY, c->a >= c->x);
                             break;
                     }
                     c->tcu = 0;
                     c->pc+= 2;
                     c->addr_bus = c->pc;
                     return _cpu_fetch_opcode;
+                case 1: // zpg
+                    c->addr_bus = c->data_bus & 0x00FF;
+                    return _cpu_read_addr;
                 case 2: // impl
                     switch (op_a)
                     {
@@ -146,46 +166,57 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                     c->pc++;
                     c->addr_bus = c->pc;
                     return _cpu_fetch_opcode;
-                case 3: // abs
+                case 3: // abs (+ JMP ind)
+                case 7: // abs,X
                     c->addr_bus++;
                     return _cpu_fetch_hi;
                 case 4: // rel
                 {
-                    u16 pc_before = c->pc;
+                    bool branch = false;
                     switch (op_a)
                     {
                         case 0: // BPL
-                            if ((c->p & STAT_N_NEGATIVE) == 0) {
-                                c->pc += c->data_bus;
-                            }
-                            else {
-                                c->pc += 2;// next instruction
-                            }
+                            branch = (c->p & STAT_N_NEGATIVE) == 0;
                             break;
                         case 1: // BMI
+                            branch = (c->p & STAT_N_NEGATIVE) == STAT_N_NEGATIVE;
                             break;
                         case 2: // BVC
+                            branch = (c->p & STAT_V_OVERFLOW) == 0;
                             break;
                         case 3: // BVS
+                            branch = (c->p & STAT_V_OVERFLOW) == STAT_V_OVERFLOW;
                             break;
                         case 4: // BCC
+                            branch = (c->p & STAT_C_CARRY) == 0;
                             break;
                         case 5: // BCS
+                            branch = (c->p & STAT_C_CARRY) == STAT_C_CARRY;
                             break;
                         case 6: // BNE
+                            branch = (c->p & STAT_Z_ZERO) == 0;
                             break;
                         case 7: // BEQ
+                            branch = (c->p & STAT_Z_ZERO) == STAT_Z_ZERO;
                             break;
                     }
-                    if ((pc_before & 0xF0) != (c->pc & 0xF0)) {
-                        return _cpu_page_boundary;
+                    u16 pc_before = c->pc;
+                    if (branch) {
+                        c->pc += c->data_bus;
+                        if ((pc_before & 0xF0) != (c->pc & 0xF0)) {
+                            return _cpu_page_boundary;
+                        }
+                    }
+                    else {
+                        c->pc += 2;// next instruction
                     }
                     c->addr_bus = c->pc;
                     c->tcu = 0;
                     return _cpu_fetch_opcode;
                 }
                 case 5: // zpg,X
-                    break;
+                    c->addr_bus = (c->data_bus + c->x) & 0x00FF;
+                    return _cpu_read_addr;
                 case 6: // impl
                     switch (op_a)
                     {
@@ -218,8 +249,6 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                     c->pc++;
                     c->addr_bus = c->pc;
                     return _cpu_fetch_opcode;
-                case 7:// abs,X
-                    break;
             }
             break;
         }
@@ -569,10 +598,43 @@ void *_cpu_page_boundray(Cpu6502 *c) {
     c = c;// ignore warning
     return _cpu_read_addr;
 }
+
 void *_cpu_write_then_fetch_add3(Cpu6502 *c) {
     c->pc += 3;
     c->tcu = 0;
     c->addr_bus = c->pc;
     setflag(c->bit_fields, PIN_READ);// read
+    return _cpu_fetch_opcode;
+}
+
+void *_cpu_write_brk_write_pclo(Cpu6502 *c) {
+    c->addr_bus = 0x0100 | c->sp;
+    c->data_bus = 0xFF & (c->pc + 2);
+    c->sp--;
+    return _cpu_write_brk_write_sr;
+}
+
+void *_cpu_write_brk_write_sr(Cpu6502 *c) {
+    c->addr_bus = 0x0100 | c->sp;
+    c->data_bus = c->p & STAT_B_BREAK;
+    c->sp--;
+    return _cpu_write_brk_fetch_pclo;
+}
+
+void *_cpu_write_brk_fetch_pclo(Cpu6502 *c) {
+    c->addr_bus = 0xFFFE;
+    setflag(c->bit_fields, PIN_READ);
+    return _cpu_read_brk_fetch_pchi;
+}
+
+void *_cpu_read_brk_fetch_pchi(Cpu6502 *c) {
+    c->pc = c->pd;
+    c->addr_bus = 0xFFFE;
+    return _cpu_read_brk_fetch_opcode;
+}
+
+void *_cpu_read_brk_fetch_opcode(Cpu6502 *c) {
+    c->pc |= c->pd << 8;
+    c->addr_bus = c->pc;
     return _cpu_fetch_opcode;
 }
