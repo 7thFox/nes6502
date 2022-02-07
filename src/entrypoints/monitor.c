@@ -86,10 +86,12 @@ u16 addr_to_stop;
 bool run_to_addr();
 
 int WIN_MEM_LINES;
+int WIN_STACK_LINES;
 int WIN_MEM_BYTES_PER_LINE;
 int WIN_MEM_COLS;
 WINDOW *win_current_mem_block;
-void draw_mem_block(MemoryBlock *b, memaddr addr, bool read);
+WINDOW *win_stack_mem_block;
+void draw_mem_block(WINDOW *win, int num_lines, MemoryBlock *b, memaddr addr, bool read, u16 leading);
 int WIN_INST_LINES;
 int WIN_INST_COLS;
 WINDOW *win_instructions;
@@ -129,10 +131,12 @@ void run_monitor(Cpu6502 *cpu) {
 #define COLOR_UNIMPORTANT_BYTES 5
     init_pair(COLOR_UNIMPORTANT_BYTES, COLOR_CYAN, -1);
 
-    WIN_MEM_LINES = LINES - 2;
     WIN_MEM_BYTES_PER_LINE = 0x10;
     WIN_MEM_COLS = (WIN_MEM_BYTES_PER_LINE * 3) - 1 + 7;
-    win_current_mem_block = newwin(WIN_MEM_LINES + 2, WIN_MEM_COLS + 4, 0, 0);
+    WIN_STACK_LINES = 0x100 / WIN_MEM_BYTES_PER_LINE + 1;
+    win_stack_mem_block = newwin(WIN_STACK_LINES + 2, WIN_MEM_COLS + 4, 0, 0);
+    WIN_MEM_LINES = LINES - WIN_STACK_LINES - 2;
+    win_current_mem_block = newwin(WIN_MEM_LINES + 2, WIN_MEM_COLS + 4, WIN_STACK_LINES, 0);
 
     WIN_INST_LINES = LINES - 2;
     WIN_INST_COLS = 7 /* "$ffff: " */ + N_MAX_BYTE_SIZE + N_MAX_TEXT_SIZE - 2 /* null terminals in count */;
@@ -142,7 +146,7 @@ void run_monitor(Cpu6502 *cpu) {
     win_registers = newwin(WIN_REG_LINES + 2, COL_REG_COLS + 4, 0, WIN_MEM_COLS + WIN_INST_COLS + 6);
 
     WIN_PPU_LINES = LINES - WIN_REG_LINES - 1;
-    win_ppu_registers = newwin(WIN_PPU_LINES + 2, COL_REG_COLS + 4, WIN_REG_LINES - 2, WIN_MEM_COLS + WIN_INST_COLS + 6);
+    win_ppu_registers = newwin(WIN_PPU_LINES + 2, COL_REG_COLS + 4, WIN_REG_LINES - 1, WIN_MEM_COLS + WIN_INST_COLS + 6);
 
     wrefresh(stdscr);
     draw(cpu);
@@ -278,12 +282,20 @@ void box_draw(WINDOW *win, _box_intersects intersect, chtype ul, chtype ur, chty
 
 void draw(Cpu6502 *cpu) {
     bool read = (cpu->bit_fields & PIN_READ) == PIN_READ;
-    draw_mem_block(
+    draw_mem_block(win_stack_mem_block, WIN_STACK_LINES,
+        mem_get_read_block(cpu->memmap, 0x0100),
+        cpu->addr_bus,
+        read,
+        0x100);
+
+    draw_mem_block(win_current_mem_block, WIN_MEM_LINES,
         read
             ? mem_get_read_block(cpu->memmap, cpu->addr_bus)
             : mem_get_write_block(cpu->memmap, cpu->addr_bus),
         cpu->addr_bus,
-        read);
+        read,
+        (cpu->addr_bus & 0xFF00) - 0x100);
+
 
     draw_instructions(mem_get_read_block(cpu->memmap, cpu->pc), cpu->pc);
 
@@ -295,23 +307,21 @@ void draw(Cpu6502 *cpu) {
     wrefresh(stdscr);
 }
 
-void draw_mem_block(MemoryBlock *b, memaddr addr, bool read) {
+void draw_mem_block(WINDOW *win, int num_lines, MemoryBlock *b, memaddr addr, bool read, u16 addr_start) {
     char fmt[8];
-    wclear(win_current_mem_block);
-    box_draw(win_current_mem_block, RIGHT, 0, 0, 0, 0);
-    wattron(win_current_mem_block, COLOR_PAIR(COLOR_NAME));
+    wclear(win);
+    box_draw(win, RIGHT, 0, 0, 0, 0);
+    wattron(win, COLOR_PAIR(COLOR_NAME));
     if (b)
     {
-        mvwaddstr(win_current_mem_block, 0, 2, b->block_name);
-        wattroff(win_current_mem_block, COLOR_PAIR(COLOR_NAME));
+        mvwaddstr(win, 0, 2, b->block_name);
+        wattroff(win, COLOR_PAIR(COLOR_NAME));
 
-        memaddr addr_start = (addr & 0xFF00) - 0x100;
-        // int val_start = 0;
-        for (int l = 0; l < WIN_MEM_LINES; l++) {
-            wattron(win_current_mem_block, COLOR_PAIR(COLOR_ADDRESS_LABEL));
+        for (int l = 0; l < num_lines; l++) {
+            wattron(win, COLOR_PAIR(COLOR_ADDRESS_LABEL));
             sprintf(fmt, "$%04X: ", addr_start + (l * WIN_MEM_BYTES_PER_LINE));
-            mvwaddstr(win_current_mem_block, l + 1, 2, fmt);
-            wattroff(win_current_mem_block, COLOR_PAIR(COLOR_ADDRESS_LABEL));
+            mvwaddstr(win, l + 1, 2, fmt);
+            wattroff(win, COLOR_PAIR(COLOR_ADDRESS_LABEL));
 
             for (int i = 0; i < WIN_MEM_BYTES_PER_LINE; i++) {
 
@@ -319,29 +329,33 @@ void draw_mem_block(MemoryBlock *b, memaddr addr, bool read) {
                 if (myaddr >= b->range_low && myaddr <= b->range_high)
                 {
                     if (myaddr == addr) {
-                        wattron(win_current_mem_block, COLOR_PAIR(COLOR_ADDRESSED));
+                        wattron(win, COLOR_PAIR(COLOR_ADDRESSED));
                     }
                     snprintf(fmt, 4, "%02X ", b->values[myaddr - b->range_low]);
-                    waddstr(win_current_mem_block, fmt);
-                    wattroff(win_current_mem_block, COLOR_PAIR(COLOR_ADDRESSED));
+                    waddstr(win, fmt);
+                    wattroff(win, COLOR_PAIR(COLOR_ADDRESSED));
                 }
             }
         }
     }
     else
     {
-        mvwaddstr(win_current_mem_block, 0, 2, "Unaddressable Memory");
-        wattroff(win_current_mem_block, COLOR_PAIR(COLOR_NAME));
+        mvwaddstr(win, 0, 2, "Unaddressable Memory");
+        wattroff(win, COLOR_PAIR(COLOR_NAME));
     }
 
-    sprintf(fmt, " $%04x ", addr);
-    mvwaddstr(win_current_mem_block, 0, WIN_MEM_COLS - 9, fmt);
+    if (b == NULL ||
+        (b->range_low <= addr && b->range_high >= addr))
+    {
+        sprintf(fmt, " $%04x ", addr);
+        mvwaddstr(win, 0, WIN_MEM_COLS - 9, fmt);
 
-    wattron(win_current_mem_block, COLOR_PAIR(COLOR_FANCY));
-    mvwaddstr(win_current_mem_block, 0, WIN_MEM_COLS - 1, read ? " R " : " W ");
-    wattroff(win_current_mem_block, COLOR_PAIR(COLOR_FANCY));
+        wattron(win, COLOR_PAIR(COLOR_FANCY));
+        mvwaddstr(win, 0, WIN_MEM_COLS - 1, read ? " R " : " W ");
+        wattroff(win, COLOR_PAIR(COLOR_FANCY));
+    }
 
-    wrefresh(win_current_mem_block);
+    wrefresh(win);
 }
 
 void draw_instructions(MemoryBlock *b, memaddr pc) {
