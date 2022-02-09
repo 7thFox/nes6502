@@ -499,8 +499,9 @@ testcase(JMP_abs) {
 }
 
 testcase(LDX_imm__N0Z0) {
+    u8 val = rand_range(0x01, 0x7F);
     u8 rom_value[] = {
-        (u8)0xA2, (u8)0x11,
+        (u8)0xA2, val,
     };
 
     return compare_execution(
@@ -512,7 +513,7 @@ testcase(LDX_imm__N0Z0) {
             num_cycles: 2,
             instruction_size: 2,
             updates_x: true,
-            x: 0x11,
+            x: val,
             flags_unset: STAT_N_NEGATIVE | STAT_Z_ZERO,
         });
 }
@@ -538,8 +539,9 @@ testcase(LDX_imm__N0Z1) {
 }
 
 testcase(LDX_imm__N1Z0) {
+    u8 val = rand_range(0x80, 0xFF);
     u8 rom_value[] = {
-        (u8)0xA2, (u8)0x81,
+        (u8)0xA2, val,
     };
 
     return compare_execution(
@@ -551,7 +553,7 @@ testcase(LDX_imm__N1Z0) {
             num_cycles: 2,
             instruction_size: 2,
             updates_x: true,
-            x: 0x81,
+            x: val,
             flags_set: STAT_N_NEGATIVE,
             flags_unset: STAT_Z_ZERO,
         });
