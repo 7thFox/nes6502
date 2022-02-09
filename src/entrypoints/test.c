@@ -13,7 +13,8 @@
 #define RAM_OFFSET 0x0000
 #define ROM_OFFSET 0x4000
 
-char error_message[256];// I'd prefer not to malloc/free for every test
+bool print_errors_only = true;
+char error_message[256]; // I'd prefer not to malloc/free for every test
 
 // #define TEST_ALL_TESTS_INCLUDED
 
@@ -1247,32 +1248,34 @@ int main(int argc, char* argv[]) {
         TestResult result = test();
         clock_t end_test = clock();
 
-        if (result.is_header) {
-            printf("%s:\n", error_message);
-            continue;
-        }
+        if (!print_errors_only || (!result.is_header && !result.is_success)) {
+            if (result.is_header) {
+                printf("%s:\n", error_message);
+                continue;
+            }
 
-        printf("  %-25s", buff);
-        if (result.is_success) {
-            printf(" Success");
-        }
-        else {
-            all_success = false;
-            printf(" Failed");
-        }
+            printf("  %-25s", buff);
+            if (result.is_success) {
+                printf(" Success");
+            }
+            else {
+                all_success = false;
+                printf(" Failed");
+            }
 
-        int runtime_clocks = end_test - start_test;
-        int runtime_ms = runtime_clocks / CLOCKS_PER_MS;
-        printf(" (%ims", runtime_ms);
-        if (runtime_ms == 0) {
-            printf(" %i ticks", runtime_clocks);
-        }
-        printf(")");
+            int runtime_clocks = end_test - start_test;
+            int runtime_ms = runtime_clocks / CLOCKS_PER_MS;
+            printf(" (%ims", runtime_ms);
+            if (runtime_ms == 0) {
+                printf(" %i ticks", runtime_clocks);
+            }
+            printf(")");
 
-        if (!result.is_success) {
-            printf(" - %s", error_message);
+            if (!result.is_success) {
+                printf(" - %s", error_message);
+            }
+            printf("\n");
         }
-        printf("\n");
     }
 
     clock_t end_all = clock();
@@ -1309,16 +1312,22 @@ void parse_args(int argc, char* argv[]) {
     unsigned int seed = time(NULL);
 
     for (int i = 1; i < argc; i++) {
-        arg("--seed", 1,
-            {
-                seed = (unsigned int)atoi(argv[i + 1]);
-            });
+        arg("--seed", 1, {
+            seed = (unsigned int)atoi(argv[i + 1]);
+        });
+        arg("--errors-only", 0, {
+            print_errors_only = true;
+        });
+        arg("-e", 0, {
+            print_errors_only = true;
+        });
     }
 
     printf("rand seed: %i\n", seed);
     srand(seed);
 
 }
+
 InstructionExecutionInfo execute_instruction(
     u8 *rom_value, size_t rom_size,
     u8 *ram_value, size_t ram_size,
