@@ -637,6 +637,8 @@ int main(int argc, char* argv[]) {
 
     printf("\n");
 
+    const int CLOCKS_PER_MS = (CLOCKS_PER_SEC / 1000);
+
     bool all_success = true;
     clock_t start_all = clock();
     for (int test_index = 0; test_index < n_tests; test_index++)
@@ -653,28 +655,48 @@ int main(int argc, char* argv[]) {
             continue;
         }
 
-        int runtime_ms = (end_test - start_test) / CLOCKS_PER_SEC * 1000;
-
+        printf("  %-25s", buff);
         if (result.is_success) {
-            printf("  %-25s Success (%ims)                             \n", buff, runtime_ms);
+            printf(" Success");
         }
         else {
             all_success = false;
-            printf("  %-25s Failed  (%ims) - %s                       \n", buff, runtime_ms, error_message);
+            printf(" Failed");
         }
+
+        int runtime_clocks = end_test - start_test;
+        int runtime_ms = runtime_clocks / CLOCKS_PER_MS;
+        printf(" (%ims", runtime_ms);
+        if (runtime_ms == 0) {
+            printf(" %i ticks", runtime_clocks);
+        }
+        printf(")");
+
+        if (!result.is_success) {
+            printf(" - %s", error_message);
+        }
+        printf("\n");
     }
 
     clock_t end_all = clock();
-    int total_runtime_ms = (end_all - start_all) / CLOCKS_PER_SEC * 1000;
 
-    printf("\n");
     if (all_success)
     {
-        printf("All unit tests completed successfully. Total run time: %ims\n", total_runtime_ms);
+        printf("All unit tests completed successfully. Total run time: ");
     }
     else {
-        printf("Unit tests failed. Total run time: %ims\n", total_runtime_ms);
+        printf("Unit tests failed. Total run time: ");
     }
+
+    int total_runtime_clocks = end_all - start_all;
+    int total_runtime_ms = total_runtime_clocks / CLOCKS_PER_MS;
+    printf("%ims", total_runtime_ms);
+    if (total_runtime_ms == 0) {
+        printf(" %i ticks", total_runtime_clocks);
+    }
+    printf("\n");
+
+    return all_success ? 0 : 1;
 }
 
 #define arg(flag, n_args, block)      \
