@@ -15,7 +15,16 @@
 
 char error_message[256];// I'd prefer not to malloc/free for every test
 
+// #define TEST_ALL_TESTS_INCLUDED
+
+#ifdef TEST_ALL_TESTS_INCLUDED
+// static functions are the only ones that error for -Wunused-function, but
+// they also don't provide info when using stacktrace(), which we use for
+// test names.
+#define testcase(name) static TestResult name()
+#else
 #define testcase(name) TestResult name()
+#endif
 
 typedef struct {
     bool is_success;
@@ -72,6 +81,240 @@ typedef struct {
                 actual, actual);                            \
         return (TestResult){is_success : false};            \
     }
+
+TestResult compare_execution(InstructionExecutionInfo actual, ExpectedExecutionInfo expected);
+InstructionExecutionInfo execute_instruction(u8 *rom_value, size_t rom_size, u8 *ram_value, size_t ram_size, void (*pre_execute)(Cpu6502 *));
+
+// pre-execute's
+void set_x_zero(Cpu6502 *c);
+void set_x_negative(Cpu6502 *c);
+void set_x_positive(Cpu6502 *c);
+void set_y_zero(Cpu6502 *c);
+void set_y_negative(Cpu6502 *c);
+void set_y_positive(Cpu6502 *c);
+void set_a_zero(Cpu6502 *c);
+void set_a_negative(Cpu6502 *c);
+void set_a_positive(Cpu6502 *c);
+
+testcase(NOP_impl) {
+    u8 rom_value[] = {
+        (u8)0xEA,
+    };
+
+    return compare_execution(
+        execute_instruction(
+            rom_value, sizeof(rom_value) / sizeof(u8),
+            NULL, 0,
+            NULL),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+        });
+}
+
+testcase(LDX_imm__N0Z0) {
+    u8 rom_value[] = {
+        (u8)0xA2, (u8)0x11,
+    };
+
+    return compare_execution(
+        execute_instruction(
+            rom_value, sizeof(rom_value) / sizeof(u8),
+            NULL, 0,
+            NULL),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 2,
+            updates_x: true,
+            x: 0x11,
+            flags_unset: STAT_N_NEGATIVE | STAT_Z_ZERO,
+        });
+}
+
+testcase(LDX_imm__N0Z1) {
+    u8 rom_value[] = {
+        (u8)0xA2, (u8)0x00,
+    };
+
+    return compare_execution(
+        execute_instruction(
+            rom_value, sizeof(rom_value) / sizeof(u8),
+            NULL, 0,
+            NULL),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 2,
+            updates_x: true,
+            x: 0x00,
+            flags_set: STAT_Z_ZERO,
+            flags_unset: STAT_N_NEGATIVE,
+        });
+}
+
+testcase(LDX_imm__N1Z0) {
+    u8 rom_value[] = {
+        (u8)0xA2, (u8)0x81,
+    };
+
+    return compare_execution(
+        execute_instruction(
+            rom_value, sizeof(rom_value) / sizeof(u8),
+            NULL, 0,
+            NULL),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 2,
+            updates_x: true,
+            x: 0x81,
+            flags_set: STAT_N_NEGATIVE,
+            flags_unset: STAT_Z_ZERO,
+        });
+}
+
+testcase(CLC_impl) {
+    u8 rom_value[] = {
+        (u8)0x18,
+    };
+
+    return compare_execution(
+        execute_instruction(
+            rom_value, sizeof(rom_value) / sizeof(u8),
+            NULL, 0,
+            NULL),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            flags_unset: STAT_C_CARRY,
+        });
+}
+
+testcase(CLD_impl) {
+    u8 rom_value[] = {
+        (u8)0xD8,
+    };
+
+    return compare_execution(
+        execute_instruction(
+            rom_value, sizeof(rom_value) / sizeof(u8),
+            NULL, 0,
+            NULL),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            flags_unset: STAT_D_DECIMAL,
+        });
+}
+
+testcase(CLI_impl) {
+    u8 rom_value[] = {
+        (u8)0x58,
+    };
+
+    return compare_execution(
+        execute_instruction(
+            rom_value, sizeof(rom_value) / sizeof(u8),
+            NULL, 0,
+            NULL),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            flags_unset: STAT_I_INTERRUPT,
+        });
+}
+
+testcase(CLV_impl) {
+    u8 rom_value[] = {
+        (u8)0xB8,
+    };
+
+    return compare_execution(
+        execute_instruction(
+            rom_value, sizeof(rom_value) / sizeof(u8),
+            NULL, 0,
+            NULL),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            flags_unset: STAT_V_OVERFLOW,
+        });
+}
+
+void get_test_name(char* buff, void *test_func) {
+    void *bt[1] = { test_func };
+    char **b = backtrace_symbols(bt, 1);
+    if (b) {
+        int start = 0;
+        while (b[0][start] != '(') start++;
+
+        int end = start;
+        while (b[0][end] != '+') end++;
+
+        int len = end - start - 1;
+        sprintf(buff, "%.*s", len, b[0] + start + 1);
+        free(b);
+    }
+    else {
+        buff[0] = '\0';
+    }
+}
+
+// int main(int argc, char* argv[]) {
+int main() {
+    enable_stacktrace();
+
+    TestResult (*test_functions[])() = {
+        &NOP_impl,
+
+        // clear-flag instructions
+        &CLC_impl,
+        &CLD_impl,
+        &CLI_impl,
+        &CLV_impl,
+
+        // load instructions
+        &LDX_imm__N0Z0,
+        &LDX_imm__N0Z1,
+        &LDX_imm__N1Z0,
+    };
+
+    char buff[64];
+    int n_tests = sizeof(test_functions) / (sizeof(test_functions[0]));
+
+    bool all_success = true;
+    clock_t start_all = clock();
+    for (int test_index = 0; test_index < n_tests; test_index++)
+    {
+        TestResult(*test)() = test_functions[test_index];
+        get_test_name(buff, test);
+        printf("Running test %i/%i '%s'...", test_index+1, n_tests, buff);
+
+        clock_t start_test = clock();
+        TestResult result = test();
+        clock_t end_test = clock();
+
+        int runtime_ms = (end_test - start_test) / CLOCKS_PER_SEC * 1000;
+
+        if (result.is_success) {
+            printf("\r  %-20s Success (%ims)                             \n", buff, runtime_ms);
+        }
+        else {
+            all_success = false;
+            printf("\r  %-20s Failed  (%ims) - %s                       \n", buff, runtime_ms, error_message);
+        }
+    }
+
+    clock_t end_all = clock();
+    int total_runtime_ms = (end_all - start_all) / CLOCKS_PER_SEC * 1000;
+
+    printf("\n");
+    if (all_success)
+    {
+        printf("All unit tests completed successfully. Total run time: %ims\n", total_runtime_ms);
+    }
+    else {
+        printf("Unit tests failed. Total run time: %ims\n", total_runtime_ms);
+    }
+}
 
 InstructionExecutionInfo execute_instruction(
     u8 *rom_value, size_t rom_size,
@@ -250,148 +493,4 @@ TestResult compare_execution(
     }
 
     return (TestResult){is_success : true};
-}
-
-testcase(NOP_impl) {
-    u8 rom_value[] = {
-        (u8)0xEA,
-    };
-
-    return compare_execution(
-        execute_instruction(
-            rom_value, sizeof(rom_value) / sizeof(u8),
-            NULL, 0,
-            NULL),
-        (ExpectedExecutionInfo){
-            num_cycles: 2,
-            instruction_size: 1,
-        });
-}
-
-testcase(LDX_imm__N0Z0) {
-    u8 rom_value[] = {
-        (u8)0xA2, (u8)0x11,
-    };
-
-    return compare_execution(
-        execute_instruction(
-            rom_value, sizeof(rom_value) / sizeof(u8),
-            NULL, 0,
-            NULL),
-        (ExpectedExecutionInfo){
-            num_cycles: 2,
-            instruction_size: 2,
-            updates_x: true,
-            x: 0x11,
-            flags_unset: STAT_N_NEGATIVE | STAT_Z_ZERO,
-        });
-}
-
-testcase(LDX_imm__N0Z1) {
-    u8 rom_value[] = {
-        (u8)0xA2, (u8)0x00,
-    };
-
-    return compare_execution(
-        execute_instruction(
-            rom_value, sizeof(rom_value) / sizeof(u8),
-            NULL, 0,
-            NULL),
-        (ExpectedExecutionInfo){
-            num_cycles: 2,
-            instruction_size: 2,
-            updates_x: true,
-            x: 0x00,
-            flags_set: STAT_Z_ZERO,
-            flags_unset: STAT_N_NEGATIVE,
-        });
-}
-
-testcase(LDX_imm__N1Z0) {
-    u8 rom_value[] = {
-        (u8)0xA2, (u8)0x81,
-    };
-
-    return compare_execution(
-        execute_instruction(
-            rom_value, sizeof(rom_value) / sizeof(u8),
-            NULL, 0,
-            NULL),
-        (ExpectedExecutionInfo){
-            num_cycles: 2,
-            instruction_size: 2,
-            updates_x: true,
-            x: 0x81,
-            flags_set: STAT_N_NEGATIVE,
-            flags_unset: STAT_Z_ZERO,
-        });
-}
-
-void get_test_name(char* buff, void *test_func) {
-    void *bt[1] = { test_func };
-    char **b = backtrace_symbols(bt, 1);
-    if (b) {
-        int start = 0;
-        while (b[0][start] != '(') start++;
-
-        int end = start;
-        while (b[0][end] != '+') end++;
-
-        int len = end - start - 1;
-        sprintf(buff, "%.*s", len, b[0] + start + 1);
-        free(b);
-    }
-    else {
-        buff[0] = '\0';
-    }
-}
-
-// int main(int argc, char* argv[]) {
-int main() {
-    enable_stacktrace();
-
-    testcase((*test_functions[])) = {
-        &NOP_impl,
-        &LDX_imm__N0Z0,
-        &LDX_imm__N0Z1,
-        &LDX_imm__N1Z0,
-    };
-
-    char buff[64];
-    int n_tests = sizeof(test_functions) / (sizeof(test_functions[0]));
-
-    bool all_success = true;
-    clock_t start_all = clock();
-    for (int test_index = 0; test_index < n_tests; test_index++)
-    {
-        testcase((*test)) = test_functions[test_index];
-        get_test_name(buff, test);
-        printf("Running test %i/%i '%s'...", test_index+1, n_tests, buff);
-
-        clock_t start_test = clock();
-        TestResult result = test();
-        clock_t end_test = clock();
-
-        int runtime_ms = (end_test - start_test) / CLOCKS_PER_SEC * 1000;
-
-        if (result.is_success) {
-            printf("\r  %-20s Success (%ims)                             \n", buff, runtime_ms);
-        }
-        else {
-            all_success = false;
-            printf("\r  %-20s Failed  (%ims) - %s                       \n", buff, runtime_ms, error_message);
-        }
-    }
-
-    clock_t end_all = clock();
-    int total_runtime_ms = (end_all - start_all) / CLOCKS_PER_SEC * 1000;
-
-    printf("\n");
-    if (all_success)
-    {
-        printf("All unit tests completed successfully. Total run time: %ims\n", total_runtime_ms);
-    }
-    else {
-        printf("Unit tests failed. Total run time: %ims\n", total_runtime_ms);
-    }
 }

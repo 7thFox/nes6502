@@ -2,7 +2,7 @@ monitor: bin
 	gcc -lncurses -rdynamic -Wall -Wextra -Werror src/*.c src/entrypoints/monitor.c -o bin/monitor
 
 test: bin
-	gcc -rdynamic -Wall -Wextra -Werror src/*.c src/entrypoints/test.c -o bin/test
+	gcc -rdynamic -Wall -Wunused-function -Wextra -Werror src/*.c src/entrypoints/test.c -o bin/test
 	bin/test
 
 run: monitor
