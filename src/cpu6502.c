@@ -171,6 +171,7 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                             return _cpu_read_addr;
                         case 4: // DEY
                             c->y--;
+                            _cpu_update_NZ_flags(c, c->y);
                             break;
                         case 5: // TAY
                             c->y = c->a;

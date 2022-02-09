@@ -87,6 +87,16 @@ void set_x_81_FF(Cpu6502 *c) { c->x = rand_range(0x81, 0xFF); }
 void set_x_7F(Cpu6502 *c) { c->x = 0x7F; }
 void set_x_FF(Cpu6502 *c) { c->x = 0xFF; }
 
+void set_y_00(Cpu6502 *c) { c->y = 0x00; }
+void set_y_01(Cpu6502 *c) { c->y = 0x01; }
+void set_y_01_7E(Cpu6502 *c) { c->y = rand_range(0x01, 0x7E); }
+void set_y_02_7F(Cpu6502 *c) { c->y = rand_range(0x02, 0x7F); }
+void set_y_80(Cpu6502 *c) { c->y = 0x80; }
+void set_y_80_FE(Cpu6502 *c) { c->y = rand_range(0x80, 0xFE); }
+void set_y_81_FF(Cpu6502 *c) { c->y = rand_range(0x81, 0xFF); }
+void set_y_7F(Cpu6502 *c) { c->y = 0x7F; }
+void set_y_FF(Cpu6502 *c) { c->y = 0xFF; }
+
 testcase(NOP_impl) {
     u8 rom_value[] = {
         (u8)0xEA,
@@ -332,6 +342,108 @@ testcase(DEX_impl__N1Z0_boundary) {
         });
 }
 
+testcase(DEY_impl__N0Z0) {
+    u8 rom_value[] = {
+        (u8)0x88,
+    };
+
+    InstructionExecutionInfo info = execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_y_02_7F);
+
+    return compare_execution(
+        info,
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            flags_unset: STAT_N_NEGATIVE | STAT_Z_ZERO,
+            updates_y: true,
+            y: info.y0 - 1,
+        });
+}
+
+testcase(DEY_impl__N0Z0_boundary) {
+    u8 rom_value[] = {
+        (u8)0x88,
+    };
+
+    return compare_execution(
+        execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_y_80),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            flags_unset: STAT_N_NEGATIVE | STAT_Z_ZERO,
+            updates_y: true,
+            y: 0x7F,
+        });
+}
+
+testcase(DEY_impl__N0Z1) {
+    u8 rom_value[] = {
+        (u8)0x88,
+    };
+
+    return compare_execution(
+        execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_y_01),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            flags_set: STAT_Z_ZERO,
+            flags_unset: STAT_N_NEGATIVE,
+            updates_y: true,
+            y: 0,
+        });
+}
+
+testcase(DEY_impl__N1Z0) {
+    u8 rom_value[] = {
+        (u8)0x88,
+    };
+
+    InstructionExecutionInfo info = execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_y_81_FF);
+
+    return compare_execution(
+        info,
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            flags_set: STAT_N_NEGATIVE,
+            flags_unset: STAT_Z_ZERO,
+            updates_y: true,
+            y: info.y0 - 1,
+        });
+}
+
+testcase(DEY_impl__N1Z0_boundary) {
+    u8 rom_value[] = {
+        (u8)0x88,
+    };
+
+    return compare_execution(
+        execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_y_00),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            flags_set: STAT_N_NEGATIVE,
+            flags_unset: STAT_Z_ZERO,
+            updates_y: true,
+            y: 0xFF,
+        });
+}
+
 testcase(INX_impl__N0Z0) {
     u8 rom_value[] = {
         (u8)0xE8,
@@ -470,18 +582,16 @@ void get_test_name(char* buff, void *test_func) {
         return (TestResult){is_header : true}; \
     }
 
-header(__HEADER__MISC__, "Miscellaneous Instructions")
-header(__HEADER__LOAD__, "Load Instructions")
-header(__HEADER__INCDEC__, "Increment/Decrement Instructions")
-header(__HEADER__FLAG__, "Flag Set/Clear Instructions")
+header(__HEADER__MISC__, "Miscellaneous Instructions");
+header(__HEADER__LOAD__, "Load Instructions");
+header(__HEADER__INCDEC__, "Increment/Decrement Instructions");
+header(__HEADER__FLAG__, "Flag Set/Clear Instructions");
 
-// int main(int argc, char* argv[]) {
-int main() {
+void parse_args(int argc, char* argv[]);
+
+int main(int argc, char* argv[]) {
     enable_stacktrace();
-
-    unsigned int seed = time(NULL);
-    printf("rand seed: %i\n", seed);
-    srand(seed);
+    parse_args(argc, argv);
 
     TestResult (*test_functions[])() = {
 
@@ -492,16 +602,12 @@ int main() {
         &CLV_impl,
 
         &__HEADER__LOAD__,
+
         &LDX_imm__N0Z0,
         &LDX_imm__N0Z1,
         &LDX_imm__N1Z0,
 
         &__HEADER__INCDEC__,
-        &DEX_impl__N0Z0,
-        &DEX_impl__N0Z0_boundary,
-        &DEX_impl__N0Z1,
-        &DEX_impl__N1Z0,
-        &DEX_impl__N1Z0_boundary,
 
         &INX_impl__N0Z0,
         &INX_impl__N0Z0_boundary,
@@ -509,7 +615,20 @@ int main() {
         &INX_impl__N1Z0,
         &INX_impl__N1Z0_boundary,
 
+        &DEX_impl__N0Z0,
+        &DEX_impl__N0Z0_boundary,
+        &DEX_impl__N0Z1,
+        &DEX_impl__N1Z0,
+        &DEX_impl__N1Z0_boundary,
+
+        &DEY_impl__N0Z0,
+        &DEY_impl__N0Z0_boundary,
+        &DEY_impl__N0Z1,
+        &DEY_impl__N1Z0,
+        &DEY_impl__N1Z0_boundary,
+
         &__HEADER__MISC__,
+
         &NOP_impl,
     };
 
@@ -558,6 +677,29 @@ int main() {
     }
 }
 
+#define arg(flag, n_args, block)      \
+    if (strcmp(argv[i], flag) == 0 && \
+        i + n_args < argc)            \
+    {                                 \
+        block;                        \
+        i += n_args;                  \
+        continue;                     \
+    }
+
+void parse_args(int argc, char* argv[]) {
+    unsigned int seed = time(NULL);
+
+    for (int i = 1; i < argc; i++) {
+        arg("--seed", 1,
+            {
+                seed = (unsigned int)atoi(argv[i + 1]);
+            });
+    }
+
+    printf("rand seed: %i\n", seed);
+    srand(seed);
+
+}
 InstructionExecutionInfo execute_instruction(
     u8 *rom_value, size_t rom_size,
     u8 *ram_value, size_t ram_size,
