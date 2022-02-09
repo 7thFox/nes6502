@@ -175,9 +175,11 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                             break;
                         case 5: // TAY
                             c->y = c->a;
+                            _cpu_update_NZ_flags(c, c->y);
                             break;
                         case 6: // INY
                             c->y++;
+                            _cpu_update_NZ_flags(c, c->y);
                             break;
                         case 7: // INX
                             c->x++;
@@ -256,6 +258,7 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                             break;
                         case 4: // TYA
                             c->a = c->y;
+                            _cpu_update_NZ_flags(c, c->a);
                             break;
                         case 5: // CLV
                             unsetflag(c->p, STAT_V_OVERFLOW);
@@ -366,9 +369,11 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                             break;
                         case 4: // TXA
                             c->a = c->x;
+                            _cpu_update_NZ_flags(c, c->a);
                             break;
                         case 5: // TAX
                             c->x = c->a;
+                            _cpu_update_NZ_flags(c, c->x);
                             break;
                         case 6: // DEX
                             c->x--;
@@ -395,6 +400,8 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                             c->sp = c->x;
                             break;
                         case 5: // TSX
+                            c->x = c->sp;
+                            _cpu_update_NZ_flags(c, c->x);
                             break;
                     }
                     c->tcu = 0;

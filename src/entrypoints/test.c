@@ -79,22 +79,54 @@ InstructionExecutionInfo execute_instruction(u8 *rom_value, size_t rom_size, u8 
 
 // pre-execute's
 #define rand_range(lo, hi) ((rand() % (hi - lo + 1)) + lo)
+void set_a_00(Cpu6502 *c) { c->a = 0x00; }
+void set_a_00_FF(Cpu6502 *c) { c->a = rand_range(0x00, 0xFF); }
+void set_a_01(Cpu6502 *c) { c->a = 0x01; }
+void set_a_01_7E(Cpu6502 *c) { c->a = rand_range(0x01, 0x7E); }
+void set_a_01_7F(Cpu6502 *c) { c->a = rand_range(0x01, 0x7F); }
+void set_a_02_7F(Cpu6502 *c) { c->a = rand_range(0x02, 0x7F); }
+void set_a_80(Cpu6502 *c) { c->a = 0x80; }
+void set_a_80_FE(Cpu6502 *c) { c->a = rand_range(0x80, 0xFE); }
+void set_a_80_FF(Cpu6502 *c) { c->a = rand_range(0x80, 0xFF); }
+void set_a_81_FF(Cpu6502 *c) { c->a = rand_range(0x81, 0xFF); }
+void set_a_7F(Cpu6502 *c) { c->a = 0x7F; }
+void set_a_FF(Cpu6502 *c) { c->a = 0xFF; }
+
+void set_sp_00(Cpu6502 *c) { c->sp = 0x00; }
+void set_sp_00_FF(Cpu6502 *c) { c->sp = rand_range(0x00, 0xFF); }
+void set_sp_01(Cpu6502 *c) { c->sp = 0x01; }
+void set_sp_01_7E(Cpu6502 *c) { c->sp = rand_range(0x01, 0x7E); }
+void set_sp_01_7F(Cpu6502 *c) { c->sp = rand_range(0x01, 0x7F); }
+void set_sp_02_7F(Cpu6502 *c) { c->sp = rand_range(0x02, 0x7F); }
+void set_sp_80(Cpu6502 *c) { c->sp = 0x80; }
+void set_sp_80_FE(Cpu6502 *c) { c->sp = rand_range(0x80, 0xFE); }
+void set_sp_80_FF(Cpu6502 *c) { c->sp = rand_range(0x80, 0xFF); }
+void set_sp_81_FF(Cpu6502 *c) { c->sp = rand_range(0x81, 0xFF); }
+void set_sp_7F(Cpu6502 *c) { c->sp = 0x7F; }
+void set_sp_FF(Cpu6502 *c) { c->sp = 0xFF; }
+
 void set_x_00(Cpu6502 *c) { c->x = 0x00; }
+void set_x_00_FF(Cpu6502 *c) { c->x = rand_range(0x00, 0xFF); }
 void set_x_01(Cpu6502 *c) { c->x = 0x01; }
 void set_x_01_7E(Cpu6502 *c) { c->x = rand_range(0x01, 0x7E); }
+void set_x_01_7F(Cpu6502 *c) { c->x = rand_range(0x01, 0x7F); }
 void set_x_02_7F(Cpu6502 *c) { c->x = rand_range(0x02, 0x7F); }
 void set_x_80(Cpu6502 *c) { c->x = 0x80; }
 void set_x_80_FE(Cpu6502 *c) { c->x = rand_range(0x80, 0xFE); }
+void set_x_80_FF(Cpu6502 *c) { c->x = rand_range(0x80, 0xFF); }
 void set_x_81_FF(Cpu6502 *c) { c->x = rand_range(0x81, 0xFF); }
 void set_x_7F(Cpu6502 *c) { c->x = 0x7F; }
 void set_x_FF(Cpu6502 *c) { c->x = 0xFF; }
 
 void set_y_00(Cpu6502 *c) { c->y = 0x00; }
+void set_y_00_FF(Cpu6502 *c) { c->y = rand_range(0x00, 0xFF); }
 void set_y_01(Cpu6502 *c) { c->y = 0x01; }
 void set_y_01_7E(Cpu6502 *c) { c->y = rand_range(0x01, 0x7E); }
+void set_y_01_7F(Cpu6502 *c) { c->y = rand_range(0x01, 0x7F); }
 void set_y_02_7F(Cpu6502 *c) { c->y = rand_range(0x02, 0x7F); }
 void set_y_80(Cpu6502 *c) { c->y = 0x80; }
 void set_y_80_FE(Cpu6502 *c) { c->y = rand_range(0x80, 0xFE); }
+void set_y_80_FF(Cpu6502 *c) { c->y = rand_range(0x80, 0xFF); }
 void set_y_81_FF(Cpu6502 *c) { c->y = rand_range(0x81, 0xFF); }
 void set_y_7F(Cpu6502 *c) { c->y = 0x7F; }
 void set_y_FF(Cpu6502 *c) { c->y = 0xFF; }
@@ -498,6 +530,67 @@ testcase(JMP_abs) {
         });
 }
 
+testcase(LDA_imm__N0Z0) {
+    u8 val = rand_range(0x01, 0x7F);
+    u8 rom_value[] = {
+        (u8)0xA9, val,
+    };
+
+    return compare_execution(
+        execute_instruction(
+            rom_value, sizeof(rom_value) / sizeof(u8),
+            NULL, 0,
+            NULL),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 2,
+            updates_a: true,
+            a: val,
+            flags_unset: STAT_N_NEGATIVE | STAT_Z_ZERO,
+        });
+}
+
+testcase(LDA_imm__N0Z1) {
+    u8 rom_value[] = {
+        (u8)0xA9, (u8)0x00,
+    };
+
+    return compare_execution(
+        execute_instruction(
+            rom_value, sizeof(rom_value) / sizeof(u8),
+            NULL, 0,
+            NULL),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 2,
+            updates_a: true,
+            a: 0x00,
+            flags_set: STAT_Z_ZERO,
+            flags_unset: STAT_N_NEGATIVE,
+        });
+}
+
+testcase(LDA_imm__N1Z0) {
+    u8 val = rand_range(0x80, 0xFF);
+    u8 rom_value[] = {
+        (u8)0xA9, val,
+    };
+
+    return compare_execution(
+        execute_instruction(
+            rom_value, sizeof(rom_value) / sizeof(u8),
+            NULL, 0,
+            NULL),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 2,
+            updates_a: true,
+            a: val,
+            flags_set: STAT_N_NEGATIVE,
+            flags_unset: STAT_Z_ZERO,
+        });
+}
+
 testcase(LDX_imm__N0Z0) {
     u8 val = rand_range(0x01, 0x7F);
     u8 rom_value[] = {
@@ -559,6 +652,67 @@ testcase(LDX_imm__N1Z0) {
         });
 }
 
+testcase(LDY_imm__N0Z0) {
+    u8 val = rand_range(0x01, 0x7F);
+    u8 rom_value[] = {
+        (u8)0xA0, val,
+    };
+
+    return compare_execution(
+        execute_instruction(
+            rom_value, sizeof(rom_value) / sizeof(u8),
+            NULL, 0,
+            NULL),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 2,
+            updates_y: true,
+            y: val,
+            flags_unset: STAT_N_NEGATIVE | STAT_Z_ZERO,
+        });
+}
+
+testcase(LDY_imm__N0Z1) {
+    u8 rom_value[] = {
+        (u8)0xA0, (u8)0x00,
+    };
+
+    return compare_execution(
+        execute_instruction(
+            rom_value, sizeof(rom_value) / sizeof(u8),
+            NULL, 0,
+            NULL),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 2,
+            updates_y: true,
+            y: 0x00,
+            flags_set: STAT_Z_ZERO,
+            flags_unset: STAT_N_NEGATIVE,
+        });
+}
+
+testcase(LDY_imm__N1Z0) {
+    u8 val = rand_range(0x80, 0xFF);
+    u8 rom_value[] = {
+        (u8)0xA0, val,
+    };
+
+    return compare_execution(
+        execute_instruction(
+            rom_value, sizeof(rom_value) / sizeof(u8),
+            NULL, 0,
+            NULL),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 2,
+            updates_y: true,
+            y: val,
+            flags_set: STAT_N_NEGATIVE,
+            flags_unset: STAT_Z_ZERO,
+        });
+}
+
 testcase(NOP_impl) {
     u8 rom_value[] = {
         (u8)0xEA,
@@ -572,6 +726,402 @@ testcase(NOP_impl) {
         (ExpectedExecutionInfo){
             num_cycles: 2,
             instruction_size: 1,
+        });
+}
+
+testcase(SEC_impl) {
+    u8 rom_value[] = {
+        (u8)0x38,
+    };
+
+    return compare_execution(
+        execute_instruction(
+            rom_value, sizeof(rom_value) / sizeof(u8),
+            NULL, 0,
+            NULL),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            flags_set: STAT_C_CARRY,
+        });
+}
+
+testcase(SED_impl) {
+    u8 rom_value[] = {
+        (u8)0xF8,
+    };
+
+    return compare_execution(
+        execute_instruction(
+            rom_value, sizeof(rom_value) / sizeof(u8),
+            NULL, 0,
+            NULL),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            flags_set: STAT_D_DECIMAL,
+        });
+}
+
+testcase(SEI_impl) {
+    u8 rom_value[] = {
+        (u8)0x78,
+    };
+
+    return compare_execution(
+        execute_instruction(
+            rom_value, sizeof(rom_value) / sizeof(u8),
+            NULL, 0,
+            NULL),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            flags_set: STAT_I_INTERRUPT,
+        });
+}
+
+testcase(TAX_imm__N0Z0) {
+    u8 rom_value[] = {
+        (u8)0xAA,
+    };
+
+    InstructionExecutionInfo info = execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_a_01_7F);
+
+    return compare_execution(
+        info,
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            updates_x: true,
+            x: info.a0,
+            flags_unset: STAT_N_NEGATIVE | STAT_Z_ZERO,
+        });
+}
+
+testcase(TAX_imm__N0Z1) {
+    u8 rom_value[] = {
+        (u8)0xAA,
+    };
+
+    InstructionExecutionInfo info = execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_a_00);
+
+    return compare_execution(
+        info,
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            updates_x: true,
+            x: 0x00,
+            flags_set: STAT_Z_ZERO,
+            flags_unset: STAT_N_NEGATIVE,
+        });
+}
+
+testcase(TAX_imm__N1Z0) {
+    u8 rom_value[] = {
+        (u8)0xAA,
+    };
+
+    InstructionExecutionInfo info = execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_a_80_FF);
+
+    return compare_execution(
+        info,
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            updates_x: true,
+            x: info.a0,
+            flags_set: STAT_N_NEGATIVE,
+            flags_unset: STAT_Z_ZERO,
+        });
+}
+
+testcase(TAY_imm__N0Z0) {
+    u8 rom_value[] = {
+        (u8)0xA8,
+    };
+
+    InstructionExecutionInfo info = execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_a_01_7F);
+
+    return compare_execution(
+        info,
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            updates_y: true,
+            y: info.a0,
+            flags_unset: STAT_N_NEGATIVE | STAT_Z_ZERO,
+        });
+}
+
+testcase(TAY_imm__N0Z1) {
+    u8 rom_value[] = {
+        (u8)0xA8,
+    };
+
+    InstructionExecutionInfo info = execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_a_00);
+
+    return compare_execution(
+        info,
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            updates_y: true,
+            y: 0x00,
+            flags_set: STAT_Z_ZERO,
+            flags_unset: STAT_N_NEGATIVE,
+        });
+}
+
+testcase(TAY_imm__N1Z0) {
+    u8 rom_value[] = {
+        (u8)0xA8,
+    };
+
+    InstructionExecutionInfo info = execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_a_80_FF);
+
+    return compare_execution(
+        info,
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            updates_y: true,
+            y: info.a0,
+            flags_set: STAT_N_NEGATIVE,
+            flags_unset: STAT_Z_ZERO,
+        });
+}
+
+testcase(TSX_imm__N0Z0) {
+    u8 rom_value[] = {
+        (u8)0xBA,
+    };
+
+    InstructionExecutionInfo info = execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_sp_01_7F);
+
+    return compare_execution(
+        info,
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            updates_x: true,
+            x: info.sp0,
+            flags_unset: STAT_N_NEGATIVE | STAT_Z_ZERO,
+        });
+}
+
+testcase(TSX_imm__N0Z1) {
+    u8 rom_value[] = {
+        (u8)0xBA,
+    };
+
+    InstructionExecutionInfo info = execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_sp_00);
+
+    return compare_execution(
+        info,
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            updates_x: true,
+            x: 0x00,
+            flags_set: STAT_Z_ZERO,
+            flags_unset: STAT_N_NEGATIVE,
+        });
+}
+
+testcase(TSX_imm__N1Z0) {
+    u8 rom_value[] = {
+        (u8)0xBA,
+    };
+
+    InstructionExecutionInfo info = execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_sp_80_FF);
+
+    return compare_execution(
+        info,
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            updates_x: true,
+            x: info.sp0,
+            flags_set: STAT_N_NEGATIVE,
+            flags_unset: STAT_Z_ZERO,
+        });
+}
+
+testcase(TXA_imm__N0Z0) {
+    u8 rom_value[] = {
+        (u8)0x8A,
+    };
+
+    InstructionExecutionInfo info = execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_x_01_7F);
+
+    return compare_execution(
+        info,
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            updates_a: true,
+            a: info.x0,
+            flags_unset: STAT_N_NEGATIVE | STAT_Z_ZERO,
+        });
+}
+
+testcase(TXA_imm__N0Z1) {
+    u8 rom_value[] = {
+        (u8)0x8A,
+    };
+
+    InstructionExecutionInfo info = execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_x_00);
+
+    return compare_execution(
+        info,
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            updates_a: true,
+            a: 0x00,
+            flags_set: STAT_Z_ZERO,
+            flags_unset: STAT_N_NEGATIVE,
+        });
+}
+
+testcase(TXA_imm__N1Z0) {
+    u8 rom_value[] = {
+        (u8)0x8A,
+    };
+
+    InstructionExecutionInfo info = execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_x_80_FF);
+
+    return compare_execution(
+        info,
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            updates_a: true,
+            a: info.x0,
+            flags_set: STAT_N_NEGATIVE,
+            flags_unset: STAT_Z_ZERO,
+        });
+}
+
+testcase(TXS_imm) {
+    u8 rom_value[] = {
+        (u8)0x9A,
+    };
+
+    InstructionExecutionInfo info = execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_x_00_FF);
+
+    return compare_execution(
+        info,
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            updates_sp: true,
+            sp: info.x0,
+        });
+}
+
+testcase(TYA_imm__N0Z0) {
+    u8 rom_value[] = {
+        (u8)0x98,
+    };
+
+    InstructionExecutionInfo info = execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_y_01_7F);
+
+    return compare_execution(
+        info,
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            updates_a: true,
+            a: info.y0,
+            flags_unset: STAT_N_NEGATIVE | STAT_Z_ZERO,
+        });
+}
+
+testcase(TYA_imm__N0Z1) {
+    u8 rom_value[] = {
+        (u8)0x98,
+    };
+
+    InstructionExecutionInfo info = execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_y_00);
+
+    return compare_execution(
+        info,
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            updates_a: true,
+            a: 0x00,
+            flags_set: STAT_Z_ZERO,
+            flags_unset: STAT_N_NEGATIVE,
+        });
+}
+
+testcase(TYA_imm__N1Z0) {
+    u8 rom_value[] = {
+        (u8)0x98,
+    };
+
+    InstructionExecutionInfo info = execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_y_80_FF);
+
+    return compare_execution(
+        info,
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            updates_a: true,
+            a: info.y0,
+            flags_set: STAT_N_NEGATIVE,
+            flags_unset: STAT_Z_ZERO,
         });
 }
 
@@ -601,10 +1151,11 @@ void get_test_name(char* buff, void *test_func) {
         return (TestResult){is_header : true}; \
     }
 
-header(__HEADER__MISC__, "Miscellaneous Instructions");
-header(__HEADER__LOAD__, "Load Instructions");
-header(__HEADER__INCDEC__, "Increment/Decrement Instructions");
-header(__HEADER__FLAG__, "Flag Set/Clear Instructions");
+header(__HEADER__MISC__,     "Miscellaneous Instructions");
+header(__HEADER__LOAD__,     "Load Instructions");
+header(__HEADER__TRANSFER__, "Transfer Instructions");
+header(__HEADER__INCDEC__,   "Increment/Decrement Instructions");
+header(__HEADER__FLAG__,     "Flag Set/Clear Instructions");
 
 void parse_args(int argc, char* argv[]);
 
@@ -619,12 +1170,38 @@ int main(int argc, char* argv[]) {
         &CLD_impl,
         &CLI_impl,
         &CLV_impl,
+        &SEC_impl,
+        &SED_impl,
+        &SEI_impl,
 
         &__HEADER__LOAD__,
-
+        &LDA_imm__N0Z0,
+        &LDA_imm__N0Z1,
+        &LDA_imm__N1Z0,
         &LDX_imm__N0Z0,
         &LDX_imm__N0Z1,
         &LDX_imm__N1Z0,
+        &LDY_imm__N0Z0,
+        &LDY_imm__N0Z1,
+        &LDY_imm__N1Z0,
+
+        &__HEADER__TRANSFER__,
+        &TAX_imm__N0Z0,
+        &TAX_imm__N0Z1,
+        &TAX_imm__N1Z0,
+        &TAY_imm__N0Z0,
+        &TAY_imm__N0Z1,
+        &TAY_imm__N1Z0,
+        &TSX_imm__N0Z0,
+        &TSX_imm__N0Z1,
+        &TSX_imm__N1Z0,
+        &TXA_imm__N0Z0,
+        &TXA_imm__N0Z1,
+        &TXA_imm__N1Z0,
+        &TXS_imm,
+        &TYA_imm__N0Z0,
+        &TYA_imm__N0Z1,
+        &TYA_imm__N1Z0,
 
         &__HEADER__INCDEC__,
 
