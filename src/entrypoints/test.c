@@ -66,10 +66,12 @@ typedef struct {
     bool updates_y;
     bool updates_a;
     bool updates_sp;
+    bool performs_jump;
     u8 x;
     u8 y;
     u8 a;
     u8 sp;
+    u16 pc_jump;
 } ExpectedExecutionInfo;
 
 TestResult compare_execution(InstructionExecutionInfo actual, ExpectedExecutionInfo expected);
@@ -96,81 +98,6 @@ void set_y_80_FE(Cpu6502 *c) { c->y = rand_range(0x80, 0xFE); }
 void set_y_81_FF(Cpu6502 *c) { c->y = rand_range(0x81, 0xFF); }
 void set_y_7F(Cpu6502 *c) { c->y = 0x7F; }
 void set_y_FF(Cpu6502 *c) { c->y = 0xFF; }
-
-testcase(NOP_impl) {
-    u8 rom_value[] = {
-        (u8)0xEA,
-    };
-
-    return compare_execution(
-        execute_instruction(
-            rom_value, sizeof(rom_value) / sizeof(u8),
-            NULL, 0,
-            NULL),
-        (ExpectedExecutionInfo){
-            num_cycles: 2,
-            instruction_size: 1,
-        });
-}
-
-testcase(LDX_imm__N0Z0) {
-    u8 rom_value[] = {
-        (u8)0xA2, (u8)0x11,
-    };
-
-    return compare_execution(
-        execute_instruction(
-            rom_value, sizeof(rom_value) / sizeof(u8),
-            NULL, 0,
-            NULL),
-        (ExpectedExecutionInfo){
-            num_cycles: 2,
-            instruction_size: 2,
-            updates_x: true,
-            x: 0x11,
-            flags_unset: STAT_N_NEGATIVE | STAT_Z_ZERO,
-        });
-}
-
-testcase(LDX_imm__N0Z1) {
-    u8 rom_value[] = {
-        (u8)0xA2, (u8)0x00,
-    };
-
-    return compare_execution(
-        execute_instruction(
-            rom_value, sizeof(rom_value) / sizeof(u8),
-            NULL, 0,
-            NULL),
-        (ExpectedExecutionInfo){
-            num_cycles: 2,
-            instruction_size: 2,
-            updates_x: true,
-            x: 0x00,
-            flags_set: STAT_Z_ZERO,
-            flags_unset: STAT_N_NEGATIVE,
-        });
-}
-
-testcase(LDX_imm__N1Z0) {
-    u8 rom_value[] = {
-        (u8)0xA2, (u8)0x81,
-    };
-
-    return compare_execution(
-        execute_instruction(
-            rom_value, sizeof(rom_value) / sizeof(u8),
-            NULL, 0,
-            NULL),
-        (ExpectedExecutionInfo){
-            num_cycles: 2,
-            instruction_size: 2,
-            updates_x: true,
-            x: 0x81,
-            flags_set: STAT_N_NEGATIVE,
-            flags_unset: STAT_Z_ZERO,
-        });
-}
 
 testcase(CLC_impl) {
     u8 rom_value[] = {
@@ -552,9 +479,99 @@ testcase(INX_impl__N1Z0_boundary) {
         });
 }
 
+testcase(JMP_abs) {
+    u16 jmp_to = rand_range(0x4010, 0xFF00);
+    u8 rom_value[] = {
+        (u8)0x4C, (u8)(jmp_to & 0xFF), (u8)(jmp_to >> 8),
+    };
 
+    return compare_execution(
+        execute_instruction(
+            rom_value, sizeof(rom_value) / sizeof(u8),
+            NULL, 0,
+            NULL),
+        (ExpectedExecutionInfo){
+            num_cycles: 3,
+            instruction_size: 3,
+            performs_jump: true,
+            pc_jump: jmp_to,
+        });
+}
 
+testcase(LDX_imm__N0Z0) {
+    u8 rom_value[] = {
+        (u8)0xA2, (u8)0x11,
+    };
 
+    return compare_execution(
+        execute_instruction(
+            rom_value, sizeof(rom_value) / sizeof(u8),
+            NULL, 0,
+            NULL),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 2,
+            updates_x: true,
+            x: 0x11,
+            flags_unset: STAT_N_NEGATIVE | STAT_Z_ZERO,
+        });
+}
+
+testcase(LDX_imm__N0Z1) {
+    u8 rom_value[] = {
+        (u8)0xA2, (u8)0x00,
+    };
+
+    return compare_execution(
+        execute_instruction(
+            rom_value, sizeof(rom_value) / sizeof(u8),
+            NULL, 0,
+            NULL),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 2,
+            updates_x: true,
+            x: 0x00,
+            flags_set: STAT_Z_ZERO,
+            flags_unset: STAT_N_NEGATIVE,
+        });
+}
+
+testcase(LDX_imm__N1Z0) {
+    u8 rom_value[] = {
+        (u8)0xA2, (u8)0x81,
+    };
+
+    return compare_execution(
+        execute_instruction(
+            rom_value, sizeof(rom_value) / sizeof(u8),
+            NULL, 0,
+            NULL),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 2,
+            updates_x: true,
+            x: 0x81,
+            flags_set: STAT_N_NEGATIVE,
+            flags_unset: STAT_Z_ZERO,
+        });
+}
+
+testcase(NOP_impl) {
+    u8 rom_value[] = {
+        (u8)0xEA,
+    };
+
+    return compare_execution(
+        execute_instruction(
+            rom_value, sizeof(rom_value) / sizeof(u8),
+            NULL, 0,
+            NULL),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+        });
+}
 
 void get_test_name(char* buff, void *test_func) {
     void *bt[1] = { test_func };
@@ -630,6 +647,7 @@ int main(int argc, char* argv[]) {
         &__HEADER__MISC__,
 
         &NOP_impl,
+        &JMP_abs,
     };
 
     char buff[64];
@@ -807,10 +825,18 @@ TestResult compare_execution(
     ExpectedExecutionInfo expected)
 {
     assert_equals(expected.num_cycles, actual.num_cycles, "Cycles");
-    assert_equals(
-        actual.pc0 + expected.instruction_size,
-        actual.pc1,
-        "Program Counter");
+    if (expected.performs_jump) {
+        assert_equals(
+            expected.pc_jump,
+            actual.pc1,
+            "Program Counter (jump)");
+    }
+    else {
+        assert_equals(
+            actual.pc0 + expected.instruction_size,
+            actual.pc1,
+            "Program Counter");
+    }
     assert_equals(
         actual.pc1,
         actual.addr_bus1,
