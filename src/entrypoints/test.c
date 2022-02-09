@@ -28,6 +28,7 @@ char error_message[256];// I'd prefer not to malloc/free for every test
 
 typedef struct {
     bool is_success;
+    bool is_header;
 } TestResult;
 
 typedef struct {
@@ -75,11 +76,16 @@ TestResult compare_execution(InstructionExecutionInfo actual, ExpectedExecutionI
 InstructionExecutionInfo execute_instruction(u8 *rom_value, size_t rom_size, u8 *ram_value, size_t ram_size, void (*pre_execute)(Cpu6502 *));
 
 // pre-execute's
-void set_x_00(Cpu6502 *c);
-void set_x_01(Cpu6502 *c);
-void set_x_02_7F(Cpu6502 *c);
-void set_x_80(Cpu6502 *c);
-void set_x_81_FF(Cpu6502 *c);
+#define rand_range(lo, hi) ((rand() % (hi - lo + 1)) + lo)
+void set_x_00(Cpu6502 *c) { c->x = 0x00; }
+void set_x_01(Cpu6502 *c) { c->x = 0x01; }
+void set_x_01_7E(Cpu6502 *c) { c->x = rand_range(0x01, 0x7E); }
+void set_x_02_7F(Cpu6502 *c) { c->x = rand_range(0x02, 0x7F); }
+void set_x_80(Cpu6502 *c) { c->x = 0x80; }
+void set_x_80_FE(Cpu6502 *c) { c->x = rand_range(0x80, 0xFE); }
+void set_x_81_FF(Cpu6502 *c) { c->x = rand_range(0x81, 0xFF); }
+void set_x_7F(Cpu6502 *c) { c->x = 0x7F; }
+void set_x_FF(Cpu6502 *c) { c->x = 0xFF; }
 
 testcase(NOP_impl) {
     u8 rom_value[] = {
@@ -326,6 +332,118 @@ testcase(DEX_impl__N1Z0_boundary) {
         });
 }
 
+testcase(INX_impl__N0Z0) {
+    u8 rom_value[] = {
+        (u8)0xE8,
+    };
+
+    InstructionExecutionInfo info = execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_x_01_7E);
+
+    return compare_execution(
+        info,
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            flags_unset: STAT_N_NEGATIVE | STAT_Z_ZERO,
+            updates_x: true,
+            x: info.x0 + 1,
+        });
+}
+
+testcase(INX_impl__N0Z0_boundary) {
+    u8 rom_value[] = {
+        (u8)0xE8,
+    };
+
+    InstructionExecutionInfo info = execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_x_00);
+
+    return compare_execution(
+        info,
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            flags_unset: STAT_N_NEGATIVE | STAT_Z_ZERO,
+            updates_x: true,
+            x: 0x01,
+        });
+}
+
+testcase(INX_impl__N0Z1) {
+    u8 rom_value[] = {
+        (u8)0xE8,
+    };
+
+    InstructionExecutionInfo info = execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_x_FF);
+
+    return compare_execution(
+        info,
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            flags_set: STAT_Z_ZERO,
+            flags_unset: STAT_N_NEGATIVE,
+            updates_x: true,
+            x: 0x00,
+        });
+}
+
+testcase(INX_impl__N1Z0) {
+    u8 rom_value[] = {
+        (u8)0xE8,
+    };
+
+    InstructionExecutionInfo info = execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_x_80_FE);
+
+    return compare_execution(
+        info,
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            flags_set: STAT_N_NEGATIVE,
+            flags_unset: STAT_Z_ZERO,
+            updates_x: true,
+            x: info.x0 + 1,
+        });
+}
+
+testcase(INX_impl__N1Z0_boundary) {
+    u8 rom_value[] = {
+        (u8)0xE8,
+    };
+
+    InstructionExecutionInfo info = execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_x_7F);
+
+    return compare_execution(
+        info,
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            flags_set: STAT_N_NEGATIVE,
+            flags_unset: STAT_Z_ZERO,
+            updates_x: true,
+            x: 0x80,
+        });
+}
+
+
+
+
+
 void get_test_name(char* buff, void *test_func) {
     void *bt[1] = { test_func };
     char **b = backtrace_symbols(bt, 1);
@@ -345,6 +463,18 @@ void get_test_name(char* buff, void *test_func) {
     }
 }
 
+// hacky/lazy way to do headers within my test list:
+#define header(func_name, text)                \
+    testcase(func_name) {                      \
+        sprintf(error_message, "%s", text);    \
+        return (TestResult){is_header : true}; \
+    }
+
+header(__HEADER__MISC__, "Miscellaneous Instructions")
+header(__HEADER__LOAD__, "Load Instructions")
+header(__HEADER__INCDEC__, "Increment/Decrement Instructions")
+header(__HEADER__FLAG__, "Flag Set/Clear Instructions")
+
 // int main(int argc, char* argv[]) {
 int main() {
     enable_stacktrace();
@@ -354,29 +484,39 @@ int main() {
     srand(seed);
 
     TestResult (*test_functions[])() = {
-        &NOP_impl,
 
-        // clear-flag instructions
+        &__HEADER__FLAG__,
         &CLC_impl,
         &CLD_impl,
         &CLI_impl,
         &CLV_impl,
 
-        // load instructions
+        &__HEADER__LOAD__,
         &LDX_imm__N0Z0,
         &LDX_imm__N0Z1,
         &LDX_imm__N1Z0,
 
-        // Increment/Decrement
+        &__HEADER__INCDEC__,
         &DEX_impl__N0Z0,
         &DEX_impl__N0Z0_boundary,
         &DEX_impl__N0Z1,
         &DEX_impl__N1Z0,
         &DEX_impl__N1Z0_boundary,
+
+        &INX_impl__N0Z0,
+        &INX_impl__N0Z0_boundary,
+        &INX_impl__N0Z1,
+        &INX_impl__N1Z0,
+        &INX_impl__N1Z0_boundary,
+
+        &__HEADER__MISC__,
+        &NOP_impl,
     };
 
     char buff[64];
     int n_tests = sizeof(test_functions) / (sizeof(test_functions[0]));
+
+    printf("\n");
 
     bool all_success = true;
     clock_t start_all = clock();
@@ -384,20 +524,24 @@ int main() {
     {
         TestResult(*test)() = test_functions[test_index];
         get_test_name(buff, test);
-        printf("Running test %i/%i '%s'...", test_index+1, n_tests, buff);
 
         clock_t start_test = clock();
         TestResult result = test();
         clock_t end_test = clock();
 
+        if (result.is_header) {
+            printf("%s:\n", error_message);
+            continue;
+        }
+
         int runtime_ms = (end_test - start_test) / CLOCKS_PER_SEC * 1000;
 
         if (result.is_success) {
-            printf("\r  %-25s Success (%ims)                             \n", buff, runtime_ms);
+            printf("  %-25s Success (%ims)                             \n", buff, runtime_ms);
         }
         else {
             all_success = false;
-            printf("\r  %-25s Failed  (%ims) - %s                       \n", buff, runtime_ms, error_message);
+            printf("  %-25s Failed  (%ims) - %s                       \n", buff, runtime_ms, error_message);
         }
     }
 
@@ -412,24 +556,6 @@ int main() {
     else {
         printf("Unit tests failed. Total run time: %ims\n", total_runtime_ms);
     }
-}
-
-#define rand_range(lo, hi) ((rand() % (hi - lo + 1)) + lo)
-
-void set_x_00(Cpu6502 *c) {
-    c->x = 0x00;
-}
-void set_x_01(Cpu6502 *c) {
-    c->x = 0x01;
-}
-void set_x_02_7F(Cpu6502 *c) {
-    c->x = rand_range(0x02, 0x7F);
-}
-void set_x_80(Cpu6502 *c) {
-    c->x = 0x80;
-}
-void set_x_81_FF(Cpu6502 *c) {
-    c->x = rand_range(0x81, 0xFF);
 }
 
 InstructionExecutionInfo execute_instruction(
