@@ -13,6 +13,11 @@ void _cpu_update_NZ_flags(Cpu6502 *c, u8 val) {
     setunsetflag(c->p, STAT_Z_ZERO, val == 0x00);
 }
 
+void compare(Cpu6502 *c, u8 reg) {
+    _cpu_update_NZ_flags(c, reg - c->data_bus);
+    setunsetflag(c->p, STAT_C_CARRY, reg >= c->data_bus);
+}
+
 void *_cpu_fetch_opcode(Cpu6502 *c);
 void *_cpu_fetch_lo(Cpu6502 *c);
 void *_cpu_fetch_hi(Cpu6502 *c);
@@ -128,12 +133,10 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                             _cpu_update_NZ_flags(c, c->y);
                             break;
                         case 6: // CPY
-                            _cpu_update_NZ_flags(c, c->a - c->y);
-                            setunsetflag(c->p, STAT_C_CARRY, c->a >= c->y);
+                            compare(c, c->y);
                             break;
                         case 7: // CPX
-                            _cpu_update_NZ_flags(c, c->a - c->x);
-                            setunsetflag(c->p, STAT_C_CARRY, c->a >= c->x);
+                            compare(c, c->x);
                             break;
                     }
                     c->tcu = 0;
@@ -303,8 +306,7 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                             c->a = c->data_bus;
                             break;
                         case 6: // CMP
-                            _cpu_update_NZ_flags(c, c->a - c->data_bus);
-                            setunsetflag(c->p, STAT_C_CARRY, c->a >= c->data_bus);
+                            compare(c, c->a);
                             break;
                         }
                     _cpu_update_NZ_flags(c, c->a);
@@ -475,6 +477,32 @@ void *_cpu_read_addr(Cpu6502 *c) {
     switch (op_c)
     {
         case 0:
+            if (op_b == 1 || op_b == 3)
+            {
+                switch (op_a)
+                {
+                    case 1: // BIT
+                        c->p = (c->p & 0b00111111) | (c->data_bus & 0b11000000);
+                        setunsetflag(c->p, STAT_Z_ZERO, (c->data_bus & c->a) == 0);
+                        break;
+                    case 4: // STY TODO JOSH
+                        break;
+                    case 5: // LDY
+                        c->y = c->data_bus;
+                        _cpu_update_NZ_flags(c, c->y);
+                        break;
+                    case 6: // CPY
+                        compare(c, c->y);
+                        break;
+                    case 7: // CPX
+                        compare(c, c->x);
+                        break;
+                }
+                c->tcu = 0;
+                c->pc += 2;
+                c->addr_bus = c->pc;
+                return _cpu_fetch_opcode;
+            }
             switch (c->ir) {
                 case 0x28: // PLP
                 case 0x68: // PLA
@@ -515,6 +543,7 @@ void *_cpu_read_addr(Cpu6502 *c) {
                     _cpu_update_NZ_flags(c, c->a);
                     break;
                 case 6: // CMP
+                    compare(c, c->a);
                     break;
                 case 7: // SBC
                     break;
