@@ -13,7 +13,7 @@
 #define RAM_OFFSET 0x0000
 #define ROM_OFFSET 0x4000
 
-bool print_errors_only = true;
+bool print_errors_only = false;
 char error_message[256]; // I'd prefer not to malloc/free for every test
 
 // #define TEST_ALL_TESTS_INCLUDED
