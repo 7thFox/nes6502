@@ -145,6 +145,10 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                     return _cpu_fetch_opcode;
                 case 1: // zpg
                     c->addr_bus = c->data_bus & 0x00FF;
+                    if (c->ir == 0x84) { // STY
+                        c->data_bus = c->y;
+                        return _cpu_write_zpg_fetch;
+                    }
                     return _cpu_read_addr;
                 case 2: // impl
                     switch (op_a)
@@ -484,8 +488,6 @@ void *_cpu_read_addr(Cpu6502 *c) {
                     case 1: // BIT
                         c->p = (c->p & 0b00111111) | (c->data_bus & 0b11000000);
                         setunsetflag(c->p, STAT_Z_ZERO, (c->data_bus & c->a) == 0);
-                        break;
-                    case 4: // STY TODO JOSH
                         break;
                     case 5: // LDY
                         c->y = c->data_bus;
