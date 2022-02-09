@@ -371,6 +371,7 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                             break;
                         case 6: // DEX
                             c->x--;
+                            _cpu_update_NZ_flags(c, c->x);
                             break;
                         case 7: // NOP
                             break;

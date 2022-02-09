@@ -71,30 +71,15 @@ typedef struct {
     u8 sp;
 } ExpectedExecutionInfo;
 
-#define assert_equals(expected, actual, value_name)         \
-    if ((actual) != (expected))                             \
-    {                                                       \
-        sprintf(error_message,                              \
-                "%s: Expected $%02x (%i), got $%02x (%i).", \
-                value_name,                                 \
-                expected, expected,                         \
-                actual, actual);                            \
-        return (TestResult){is_success : false};            \
-    }
-
 TestResult compare_execution(InstructionExecutionInfo actual, ExpectedExecutionInfo expected);
 InstructionExecutionInfo execute_instruction(u8 *rom_value, size_t rom_size, u8 *ram_value, size_t ram_size, void (*pre_execute)(Cpu6502 *));
 
 // pre-execute's
-void set_x_zero(Cpu6502 *c);
-void set_x_negative(Cpu6502 *c);
-void set_x_positive(Cpu6502 *c);
-void set_y_zero(Cpu6502 *c);
-void set_y_negative(Cpu6502 *c);
-void set_y_positive(Cpu6502 *c);
-void set_a_zero(Cpu6502 *c);
-void set_a_negative(Cpu6502 *c);
-void set_a_positive(Cpu6502 *c);
+void set_x_00(Cpu6502 *c);
+void set_x_01(Cpu6502 *c);
+void set_x_02_7F(Cpu6502 *c);
+void set_x_80(Cpu6502 *c);
+void set_x_81_FF(Cpu6502 *c);
 
 testcase(NOP_impl) {
     u8 rom_value[] = {
@@ -239,6 +224,108 @@ testcase(CLV_impl) {
         });
 }
 
+testcase(DEX_impl__N0Z0) {
+    u8 rom_value[] = {
+        (u8)0xCA,
+    };
+
+    InstructionExecutionInfo info = execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_x_02_7F);
+
+    return compare_execution(
+        info,
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            flags_unset: STAT_N_NEGATIVE | STAT_Z_ZERO,
+            updates_x: true,
+            x: info.x0 - 1,
+        });
+}
+
+testcase(DEX_impl__N0Z0_boundary) {
+    u8 rom_value[] = {
+        (u8)0xCA,
+    };
+
+    return compare_execution(
+        execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_x_80),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            flags_unset: STAT_N_NEGATIVE | STAT_Z_ZERO,
+            updates_x: true,
+            x: 0x7F,
+        });
+}
+
+testcase(DEX_impl__N0Z1) {
+    u8 rom_value[] = {
+        (u8)0xCA,
+    };
+
+    return compare_execution(
+        execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_x_01),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            flags_set: STAT_Z_ZERO,
+            flags_unset: STAT_N_NEGATIVE,
+            updates_x: true,
+            x: 0,
+        });
+}
+
+testcase(DEX_impl__N1Z0) {
+    u8 rom_value[] = {
+        (u8)0xCA,
+    };
+
+    InstructionExecutionInfo info = execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_x_81_FF);
+
+    return compare_execution(
+        info,
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            flags_set: STAT_N_NEGATIVE,
+            flags_unset: STAT_Z_ZERO,
+            updates_x: true,
+            x: info.x0 - 1,
+        });
+}
+
+testcase(DEX_impl__N1Z0_boundary) {
+    u8 rom_value[] = {
+        (u8)0xCA,
+    };
+
+    return compare_execution(
+        execute_instruction(
+        rom_value, sizeof(rom_value) / sizeof(u8),
+        NULL, 0,
+        set_x_00),
+        (ExpectedExecutionInfo){
+            num_cycles: 2,
+            instruction_size: 1,
+            flags_set: STAT_N_NEGATIVE,
+            flags_unset: STAT_Z_ZERO,
+            updates_x: true,
+            x: 0xFF,
+        });
+}
+
 void get_test_name(char* buff, void *test_func) {
     void *bt[1] = { test_func };
     char **b = backtrace_symbols(bt, 1);
@@ -262,6 +349,10 @@ void get_test_name(char* buff, void *test_func) {
 int main() {
     enable_stacktrace();
 
+    unsigned int seed = time(NULL);
+    printf("rand seed: %i\n", seed);
+    srand(seed);
+
     TestResult (*test_functions[])() = {
         &NOP_impl,
 
@@ -275,6 +366,13 @@ int main() {
         &LDX_imm__N0Z0,
         &LDX_imm__N0Z1,
         &LDX_imm__N1Z0,
+
+        // Increment/Decrement
+        &DEX_impl__N0Z0,
+        &DEX_impl__N0Z0_boundary,
+        &DEX_impl__N0Z1,
+        &DEX_impl__N1Z0,
+        &DEX_impl__N1Z0_boundary,
     };
 
     char buff[64];
@@ -295,11 +393,11 @@ int main() {
         int runtime_ms = (end_test - start_test) / CLOCKS_PER_SEC * 1000;
 
         if (result.is_success) {
-            printf("\r  %-20s Success (%ims)                             \n", buff, runtime_ms);
+            printf("\r  %-25s Success (%ims)                             \n", buff, runtime_ms);
         }
         else {
             all_success = false;
-            printf("\r  %-20s Failed  (%ims) - %s                       \n", buff, runtime_ms, error_message);
+            printf("\r  %-25s Failed  (%ims) - %s                       \n", buff, runtime_ms, error_message);
         }
     }
 
@@ -314,6 +412,24 @@ int main() {
     else {
         printf("Unit tests failed. Total run time: %ims\n", total_runtime_ms);
     }
+}
+
+#define rand_range(lo, hi) ((rand() % (hi - lo + 1)) + lo)
+
+void set_x_00(Cpu6502 *c) {
+    c->x = 0x00;
+}
+void set_x_01(Cpu6502 *c) {
+    c->x = 0x01;
+}
+void set_x_02_7F(Cpu6502 *c) {
+    c->x = rand_range(0x02, 0x7F);
+}
+void set_x_80(Cpu6502 *c) {
+    c->x = 0x80;
+}
+void set_x_81_FF(Cpu6502 *c) {
+    c->x = rand_range(0x81, 0xFF);
 }
 
 InstructionExecutionInfo execute_instruction(
@@ -384,6 +500,17 @@ InstructionExecutionInfo execute_instruction(
 
     return info;
 }
+
+#define assert_equals(expected, actual, value_name)         \
+    if ((actual) != (expected))                             \
+    {                                                       \
+        sprintf(error_message,                              \
+                "%s: Expected $%02x (%i), got $%02x (%i).", \
+                value_name,                                 \
+                expected, expected,                         \
+                actual, actual);                            \
+        return (TestResult){is_success : false};            \
+    }
 
 TestResult compare_execution(
     InstructionExecutionInfo actual,
