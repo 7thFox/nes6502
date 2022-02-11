@@ -1,13 +1,5 @@
 #include "headers/cpu6502.h"
 
-#define setflag(p, f) p |= f
-#define unsetflag(p, f) p &= ~(f);
-#define setunsetflag(p, f, c) \
-    if (c)                    \
-        setflag(p, f);        \
-    else                      \
-        unsetflag(p, f);
-
 void _cpu_update_NZ_flags(Cpu6502 *c, u8 val) {
     setunsetflag(c->p, STAT_N_NEGATIVE, val & 0x80);
     setunsetflag(c->p, STAT_Z_ZERO, val == 0x00);

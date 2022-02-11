@@ -4,6 +4,14 @@
 #include "common.h"
 #include "memmap.h"
 
+#define setflag(p, f) p |= f
+#define unsetflag(p, f) p &= ~(f);
+#define setunsetflag(p, f, c) \
+    if (c)                    \
+        setflag(p, f);        \
+    else                      \
+        unsetflag(p, f);
+
 typedef enum {
     STAT_N_NEGATIVE     = 0x80,
     STAT_V_OVERFLOW     = 0x40,
