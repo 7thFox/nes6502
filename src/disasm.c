@@ -17,13 +17,12 @@ typedef enum {
 } AddressingMode;
 
 typedef struct {
-    const char *mnemonic;
+    const char *   mnemonic;
     AddressingMode addressing_mode;
 } InstructionMeta;
 
 int inst_get_size(InstructionMeta i) {
-    switch (i.addressing_mode)
-    {
+    switch (i.addressing_mode) {
         case AM_A:
         case AM_impl:
             return 1;
@@ -44,7 +43,7 @@ int inst_get_size(InstructionMeta i) {
     return 0;
 }
 
-#define m(m, addr, _) { .mnemonic = m, .addressing_mode = addr}
+#define m(m, addr, _) { .mnemonic = m, .addressing_mode = addr }
 
 InstructionMeta INSTRUCTIONS[0x100] = {
     m("BRK", AM_impl, op_brk), m("ORA", AM_Xind, op_ora), m("???", AM_impl, op____), m("???", AM_impl, op____), m("???", AM_impl, op____), m("ORA", AM_zpg, op_ora),  m("ASL", AM_zpg, op_asl),  m("???", AM_impl, op____), m("PHP", AM_impl, op_php), m("ORA", AM_imm, op_ora),  m("ASL", AM_A, op_asl),    m("???", AM_impl, op____), m("???", AM_impl, op____), m("ORA", AM_abs, op_ora),  m("ASL", AM_abs, op_asl),  m("???", AM_impl, op____),
@@ -73,21 +72,20 @@ Disassembler *create_disassembler() {
     return d;
 }
 
-Disassembly disasm(Disassembler* d, u8 *data_aligned, size_t data_size, int n) {
+Disassembly disasm(Disassembler *d, u8 *data_aligned, size_t data_size, int n) {
     if (n > N_MAX_DISASM) n = N_MAX_DISASM;
     u16 iData = 0;
     u16 iInst = 0;
     while (iInst < n && iData < data_size) {
-        u8 opcode = data_aligned[iData];
-        u8 lo = iData + 1u < data_size ? data_aligned[iData+1] : 0;
-        u8 hi = iData + 2u < data_size ? data_aligned[iData+2] : 0;
+        u8  opcode  = data_aligned[iData];
+        u8  lo = iData + 1u < data_size ? data_aligned[iData + 1] : 0;
+        u8  hi = iData + 2u < data_size ? data_aligned[iData + 2] : 0;
         u16 param16 = (hi << 8) | lo;
         InstructionMeta inst = INSTRUCTIONS[opcode];
 
         d->_disasm_offsets[iInst] = iData;
 
-        switch (inst.addressing_mode)
-        {
+        switch (inst.addressing_mode) {
             case AM_A:
                 sprintf(d->_disasm_text[iInst], "%s A", inst.mnemonic);
                 break;
@@ -130,27 +128,25 @@ Disassembly disasm(Disassembler* d, u8 *data_aligned, size_t data_size, int n) {
         }
 
         int size = inst_get_size(inst);
-        switch (size)
-        {
-        case 3:
-            sprintf(d->_disasm_bytes[iInst], "%02x %02x %02x ", opcode, lo, hi);
-            break;
-        case 2:
-            sprintf(d->_disasm_bytes[iInst], "%02x %02x    ", opcode, lo);
-            break;
-        case 1:
-            sprintf(d->_disasm_bytes[iInst], "%02x       ", opcode);
-            break;
-
-        default:
-            strcpy(d->_disasm_bytes[iInst], "");
-            break;
+        switch (size) {
+            case 3:
+                sprintf(d->_disasm_bytes[iInst], "%02x %02x %02x ", opcode, lo, hi);
+                break;
+            case 2:
+                sprintf(d->_disasm_bytes[iInst], "%02x %02x    ", opcode, lo);
+                break;
+            case 1:
+                sprintf(d->_disasm_bytes[iInst], "%02x       ", opcode);
+                break;
+            default:
+                strcpy(d->_disasm_bytes[iInst], "");
+                break;
         }
 
         iInst++;
         iData += size;
     }
-    return (Disassembly){iInst, d->_disasm_text, d->_disasm_bytes, d->_disasm_offsets};
+    return (Disassembly) {iInst, d->_disasm_text, d->_disasm_bytes, d->_disasm_offsets};
     // return (Disassembly){n, d->_disasm_text, d->_disasm_bytes};
 }
 

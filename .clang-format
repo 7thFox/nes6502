@@ -35,7 +35,7 @@ BreakBeforeTernaryOperators: 'true'
 ColumnLimit: 0
 DisableFormat: 'false'
 IncludeBlocks: Merge
-IndentCaseLabels: 'false'
+IndentCaseLabels: 'true'
 IndentWidth: '4'
 KeepEmptyLinesAtTheStartOfBlocks: 'false'
 PointerAlignment: Right

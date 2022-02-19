@@ -2,34 +2,36 @@
 
 u8 parse_byte(const char *contents, uint *i);
 u8 get_char_value(char c);
+
 void remove_trivia(const char *contents, uint *i, size_t l);
 
 bool rom_load(Rom *rom, const char *filepath) {
     tracef("rom_load \n");
     rom->value = 0;
-    FILE *f = fopen(filepath, "r");
+    FILE *f    = fopen(filepath, "r");
     if (!f) {
         return false;
     }
 
     fseek(f, 0, SEEK_END);
-    size_t size = ftell(f);
-    char *contents = malloc(size);
+    size_t size     = ftell(f);
+    char * contents = malloc(size);
     fseek(f, 0, SEEK_SET);
     fread(contents, 1, size, f);
     fclose(f);
 
-    if (size < 5) return false;
+    if (size < 5)
+        return false;
 
-    size_t cap = 255;
-    rom->value = malloc(sizeof(u8) * cap);
+    size_t cap    = 255;
+    rom->value    = malloc(sizeof(u8) * cap);
     rom->rom_size = 0;
 
     uint i = 0;
     rom->map_offset = parse_byte(contents, &i) << 8;
     rom->map_offset |= parse_byte(contents, &i);
     if (contents[i] != ':') return false;
-    i++;// :
+    i++; // :
 
     while (i < size) {
         remove_trivia(contents, &i, size);
@@ -71,20 +73,19 @@ u8 get_char_value(char c) {
 
 void remove_trivia(const char *contents, uint *i, size_t l) {
     while (*i < l) {
-        switch (contents[*i])
-        {
-        case '\n':
-        case ' ':
-        case '\t':
-        case '\r':
-            (*i)++;
-            break;
-        case '#':
-            (*i)++;
-            while (*i < l && contents[*i] != '\n') (*i)++;
-            break;
-        default:
-            return;
+        switch (contents[*i]) {
+            case '\n':
+            case ' ':
+            case '\t':
+            case '\r':
+                (*i)++;
+                break;
+            case '#':
+                (*i)++;
+                while (*i < l && contents[*i] != '\n') (*i)++;
+                break;
+            default:
+                return;
         }
     }
 }

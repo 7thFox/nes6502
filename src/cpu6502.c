@@ -48,13 +48,14 @@ void cpu_pulse(Cpu6502 *c) {
     c->tcu++;
     if ((c->bit_fields & PIN_READ) == PIN_READ) {
         c->data_bus = mem_read_addr(c->memmap, c->addr_bus);
-    } else {
+    }
+    else {
         mem_write_addr(c->memmap, c->addr_bus, c->data_bus);
     }
 
-    u8 pd = c->data_bus;
+    u8 pd            = c->data_bus;
     c->on_next_clock = (c->on_next_clock)(c);
-    c->pd = pd;
+    c->pd            = pd;
 }
 
 void cpu_resb(Cpu6502 *c) {
@@ -63,23 +64,23 @@ void cpu_resb(Cpu6502 *c) {
     unsetflag(c->p, STAT_D_DECIMAL);
     // we skip the whole 2-cycle set pc part (for now anyway)
     // by hacky coincidence, not defining this sets it to $0000 which is how I set up the rom for testing
-    u8 lo = mem_read_addr(c->memmap, 0xfffc);
-    u8 hi = mem_read_addr(c->memmap, 0xfffd);
-    c->pc = (hi << 8) | lo;
+    u8 lo       = mem_read_addr(c->memmap, 0xfffc);
+    u8 hi       = mem_read_addr(c->memmap, 0xfffd);
+    c->pc       = (hi << 8) | lo;
     c->addr_bus = c->pc;
-    c->tcu = 0;
+    c->tcu      = 0;
     setflag(c->bit_fields, PIN_READ);
     c->on_next_clock = (void *(*)(void *))(_cpu_fetch_opcode);
     logf("Reset CPU. PC set to $%04x ($fffc: $%02x, $fffd: $%02x)\n", c->pc, lo, hi);
 }
 
-void* _cpu_fetch_opcode(Cpu6502 *c) {
+void *_cpu_fetch_opcode(Cpu6502 *c) {
     c->ir = c->data_bus;
     c->addr_bus++;
     return _cpu_fetch_lo;
 }
 
-void* _cpu_fetch_lo(Cpu6502 *c) {
+void *_cpu_fetch_lo(Cpu6502 *c) {
     int op_a = (c->ir & 0b11100000) >> 5;
     int op_b = (c->ir & 0b00011100) >> 2;
     int op_c = (c->ir & 0b00000011) >> 0;
@@ -92,18 +93,15 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
         return _cpu_read_addr;
     }
 
-    switch (op_c)
-    {
+    switch (op_c) {
         case 0:
         {
-            switch (op_b)
-            {
+            switch (op_b) {
                 case 0:
-                    switch (op_a)
-                    {
+                    switch (op_a) {
                         case 0: // BRK
                             c->addr_bus = 0x0100 | c->sp;
-                            c->data_bus = (c->pc + 2) >> 8;// pc hi
+                            c->data_bus = (c->pc + 2) >> 8; // pc hi
                             c->sp--;
                             setflag(c->p, STAT_I_INTERRUPT);
                             unsetflag(c->bit_fields, PIN_READ);
@@ -132,7 +130,7 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                             break;
                     }
                     c->tcu = 0;
-                    c->pc+= 2;
+                    c->pc += 2;
                     c->addr_bus = c->pc;
                     return _cpu_fetch_opcode;
                 case 1: // zpg
@@ -143,8 +141,7 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                     }
                     return _cpu_read_addr;
                 case 2: // impl
-                    switch (op_a)
-                    {
+                    switch (op_a) {
                         case 0: // PHP
                             c->addr_bus = c->sp;
                             c->data_bus = c->p | STAT_B_BREAK | STAT___IGNORE;
@@ -189,8 +186,7 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                 case 4: // rel
                 {
                     bool branch = false;
-                    switch (op_a)
-                    {
+                    switch (op_a) {
                         case 0: // BPL
                             branch = (c->p & STAT_N_NEGATIVE) == 0;
                             break;
@@ -224,18 +220,17 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                         }
                     }
                     else {
-                        c->pc += 2;// next instruction
+                        c->pc += 2; // next instruction
                     }
                     c->addr_bus = c->pc;
-                    c->tcu = 0;
+                    c->tcu      = 0;
                     return _cpu_fetch_opcode;
                 }
                 case 5: // zpg,X
                     c->addr_bus = (c->data_bus + c->x) & 0x00FF;
                     return _cpu_read_addr;
                 case 6: // impl
-                    switch (op_a)
-                    {
+                    switch (op_a) {
                         case 0: // CLC
                             unsetflag(c->p, STAT_C_CARRY);
                             break;
@@ -271,14 +266,12 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
         }
         case 1:
         {
-            switch (op_b)
-            {
+            switch (op_b) {
                 case 0: // X,ind
-                    c->addr_bus = (c->data_bus + c->x) & 0x00FF;// no carry
+                    c->addr_bus = (c->data_bus + c->x) & 0x00FF; // no carry
                     return _cpu_read_ind_read_addrhi;
                 case 2: // imm
-                    switch (op_a)
-                    {
+                    switch (op_a) {
                         case 0: // ORA
                             c->a |= c->data_bus;
                             break;
@@ -308,7 +301,7 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                         case 6: // CMP
                             compare(c, c->a);
                             break;
-                        }
+                    }
                     _cpu_update_NZ_flags(c, c->a);
                     c->tcu = 0;
                     c->pc += 2;
@@ -329,11 +322,10 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
         }
         case 2:
         {
-            switch (op_b)
-            {
+            switch (op_b) {
                 case 0: // imm
                     if (op_a == 5) { // LDX
-                        c->x = c->data_bus;
+                        c->x   = c->data_bus;
                         c->tcu = 0;
                         c->pc += 2;
                         c->addr_bus = c->pc;
@@ -345,8 +337,7 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                     c->addr_bus = c->data_bus;
                     return _cpu_read_zpg;
                 case 2: // impl
-                    switch (op_a)
-                    {
+                    switch (op_a) {
                         case 0: // ASL
                             c->a <<= 1;
                             break;
@@ -386,8 +377,7 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
                 case 5: // zpg,X zpg,Y
                     break;
                 case 6: // impl
-                    switch (op_a)
-                    {
+                    switch (op_a) {
                         case 4: // TXS
                             c->sp = c->x;
                             break;
@@ -408,7 +398,7 @@ void* _cpu_fetch_lo(Cpu6502 *c) {
     return c->on_next_clock;
 }
 
-void* _cpu_fetch_hi(Cpu6502 *c) {
+void *_cpu_fetch_hi(Cpu6502 *c) {
     c->addr_bus = c->pd | (c->data_bus << 8);
 
     int op_a = (c->ir & 0b11100000) >> 5;
@@ -416,24 +406,23 @@ void* _cpu_fetch_hi(Cpu6502 *c) {
     int op_c = (c->ir & 0b00000011) >> 0;
 
     memaddr addr_no_add = c->addr_bus;
-    switch (op_b)
-    {
+    switch (op_b) {
         // case 3: // abs
             // Do nothing
         case 6: // abs,Y
-             c->addr_bus += c->y;
+            c->addr_bus += c->y;
             break;
         case 7: // abs,X
-            if (c->ir == 0xBE) {// LDX abs,Y
+            if (c->ir == 0xBE) { // LDX abs,Y
                 c->addr_bus += c->y;
                 break;
             }
-             c->addr_bus += c->x;
+            c->addr_bus += c->x;
             break;
     }
 
     if (c->ir == 0x4C) { // JMP
-        c->pc = c->addr_bus;
+        c->pc  = c->addr_bus;
         c->tcu = 0;
         return _cpu_fetch_opcode;
     }
@@ -452,26 +441,25 @@ void* _cpu_fetch_hi(Cpu6502 *c) {
     }
 
     if (op_a == 4) { // ST_
-        switch (op_c)
-        {
-            case 0:// STY
+        switch (op_c) {
+            case 0: // STY
                 c->data_bus = c->y;
                 break;
-            case 1:// STA
+            case 1: // STA
                 c->data_bus = c->a;
                 break;
-            case 2:// STX
+            case 2: // STX
                 c->data_bus = c->x;
                 break;
-            case 3:// SAX, etc
+            case 3: // SAX, etc
                 break;
         }
 
-        unsetflag(c->bit_fields, PIN_READ);// write
+        unsetflag(c->bit_fields, PIN_READ); // write
         return _cpu_write_then_fetch_add3;
     }
 
-    return _cpu_read_addr;// Fetch ADDR value and perform operation after read
+    return _cpu_read_addr; // Fetch ADDR value and perform operation after read
 }
 
 void *_cpu_read_addr(Cpu6502 *c) {
@@ -479,13 +467,10 @@ void *_cpu_read_addr(Cpu6502 *c) {
     int op_b = (c->ir & 0b00011100) >> 2;
     int op_c = (c->ir & 0b00000011) >> 0;
 
-    switch (op_c)
-    {
+    switch (op_c) {
         case 0:
-            if (op_b == 1 || op_b == 3)
-            {
-                switch (op_a)
-                {
+            if (op_b == 1 || op_b == 3) {
+                switch (op_a) {
                     case 1: // BIT
                         c->p = (c->p & 0b00111111) | (c->data_bus & 0b11000000);
                         setunsetflag(c->p, STAT_Z_ZERO, (c->data_bus & c->a) == 0);
@@ -516,7 +501,7 @@ void *_cpu_read_addr(Cpu6502 *c) {
                     c->addr_bus++;
                     return _cpu_read_addr_ind;
                 case 0xBC: // LDY abs,X
-                    c->y = c->data_bus;
+                    c->y   = c->data_bus;
                     c->tcu = 0;
                     c->pc += 3;
                     c->addr_bus = c->pc;
@@ -525,8 +510,7 @@ void *_cpu_read_addr(Cpu6502 *c) {
             break;
         case 1:
             // X,ind and ind,Y have already been decoded by this point
-            switch (op_a)
-            {
+            switch (op_a) {
                 case 0: // ORA
                     c->a |= c->data_bus;
                     _cpu_update_NZ_flags(c, c->a);
@@ -551,8 +535,7 @@ void *_cpu_read_addr(Cpu6502 *c) {
                 case 7: // SBC
                     break;
             }
-            switch (op_b)
-            {
+            switch (op_b) {
                 // case 2: imm
                 case 0: // X,ind
                 case 1: // zpg
@@ -566,12 +549,11 @@ void *_cpu_read_addr(Cpu6502 *c) {
                     c->pc += 3;
                     break;
             }
-            c->tcu = 0;
+            c->tcu      = 0;
             c->addr_bus = c->pc;
             return _cpu_fetch_opcode;
         case 2:
-            switch (op_a)
-            {
+            switch (op_a) {
                 case 0: // ASL
                     break;
                 case 1: // ROL
@@ -591,8 +573,7 @@ void *_cpu_read_addr(Cpu6502 *c) {
                 case 7: // INC
                     break;
             }
-            switch (op_b)
-            {
+            switch (op_b) {
                 case 1: // zpg
                 case 5: // zpg,X
                     c->pc += 2;
@@ -602,7 +583,7 @@ void *_cpu_read_addr(Cpu6502 *c) {
                     c->pc += 3;
                     break;
             }
-            c->tcu = 0;
+            c->tcu      = 0;
             c->addr_bus = c->pc;
             return _cpu_fetch_opcode;
     }
@@ -610,7 +591,7 @@ void *_cpu_read_addr(Cpu6502 *c) {
 }
 
 void *_cpu_page_boundary(Cpu6502 *c) {
-    c->tcu = 0;
+    c->tcu      = 0;
     c->addr_bus = c->pc;
     return _cpu_fetch_opcode;
 }
@@ -620,7 +601,7 @@ void *_cpu_read_addr_ind(Cpu6502 *c) {
 
     if (c->ir == 0x6C) { // JMP ind
         c->tcu = 0;
-        c->pc = c->addr_bus;
+        c->pc  = c->addr_bus;
         return _cpu_fetch_opcode;
     }
 
@@ -637,8 +618,7 @@ void *_cpu_push(Cpu6502 *c) {
 }
 
 void *_cpu_pop(Cpu6502 *c) {
-    switch (c->ir)
-    {
+    switch (c->ir) {
         case 0x28: // PLP
             c->p = c->pd;
             unsetflag(c->p, STAT_B_BREAK);
@@ -646,21 +626,21 @@ void *_cpu_pop(Cpu6502 *c) {
             break;
     }
     c->pc++;
-    c->tcu = 0;
+    c->tcu      = 0;
     c->addr_bus = c->pc;
     return _cpu_fetch_opcode;
 }
 
 void *_cpu_page_boundray(Cpu6502 *c) {
-    c = c;// ignore warning
+    c = c; // ignore warning
     return _cpu_read_addr;
 }
 
 void *_cpu_write_then_fetch_add3(Cpu6502 *c) {
     c->pc += 3;
-    c->tcu = 0;
+    c->tcu      = 0;
     c->addr_bus = c->pc;
-    setflag(c->bit_fields, PIN_READ);// read
+    setflag(c->bit_fields, PIN_READ); // read
     return _cpu_fetch_opcode;
 }
 
@@ -690,9 +670,9 @@ void *_cpu_read_brk_read_pchi(Cpu6502 *c) {
 }
 
 void *_cpu_read_brk_fetch(Cpu6502 *c) {
-    c->pc = (c->data_bus << 8) | c->pd;
+    c->pc       = (c->data_bus << 8) | c->pd;
     c->addr_bus = c->pc;
-    c->tcu = 0;
+    c->tcu      = 0;
     return _cpu_fetch_opcode;
 }
 
@@ -710,9 +690,9 @@ void *_cpu_read_rti_read_pchi(Cpu6502 *c) {
 }
 
 void *_cpu_read_rti_fetch(Cpu6502 *c) {
-    c->pc = (c->data_bus << 8) | c->pd;
+    c->pc       = (c->data_bus << 8) | c->pd;
     c->addr_bus = c->pc;
-    c->tcu = 0;
+    c->tcu      = 0;
     return _cpu_fetch_opcode;
 }
 
@@ -726,18 +706,17 @@ void *_cpu_read_rts_fetch(Cpu6502 *c) {
     c->pc = (c->data_bus << 8) | c->pd;
     c->pc++; // RTS adds 1 to the pushed pc
     c->addr_bus = c->pc;
-    c->tcu = 0;
+    c->tcu      = 0;
     return _cpu_fetch_opcode;
 }
 
 void *_cpu_read_zpg(Cpu6502 *c) {
     int op_c = (c->ir & 0b00000011) >> 0;
 
-    switch (op_c)
-    {
+    switch (op_c) {
         case 0: // ASL
         {
-            u8 carry = c->data_bus >> 7 & 0x01;
+            u8 carry    = c->data_bus >> 7 & 0x01;
             c->data_bus = c->data_bus << 1;
             setunsetflag(c->p, STAT_C_CARRY, carry);
             _cpu_update_NZ_flags(c, c->data_bus);
@@ -745,7 +724,7 @@ void *_cpu_read_zpg(Cpu6502 *c) {
         }
         case 1: // ROL
         {
-            u8 carry = c->data_bus >> 7 & 0x01;
+            u8 carry    = c->data_bus >> 7 & 0x01;
             c->data_bus = (c->data_bus << 1) | carry;
             setunsetflag(c->p, STAT_C_CARRY, carry);
             _cpu_update_NZ_flags(c, c->data_bus);
@@ -753,7 +732,7 @@ void *_cpu_read_zpg(Cpu6502 *c) {
         }
         case 2: // LSR
         {
-            u8 carry = c->data_bus & 0x01;
+            u8 carry    = c->data_bus & 0x01;
             c->data_bus = c->data_bus >> 1;
             setunsetflag(c->p, STAT_C_CARRY, carry);
             _cpu_update_NZ_flags(c, c->data_bus);
@@ -761,7 +740,7 @@ void *_cpu_read_zpg(Cpu6502 *c) {
         }
         case 3: // ROR
         {
-            u8 carry = c->data_bus & 0x01;
+            u8 carry    = c->data_bus & 0x01;
             c->data_bus = (c->data_bus >> 1) | (carry << 7);
             setunsetflag(c->p, STAT_C_CARRY, carry);
             _cpu_update_NZ_flags(c, c->data_bus);
@@ -773,7 +752,7 @@ void *_cpu_read_zpg(Cpu6502 *c) {
         case 5: // LDX
             c->x = c->data_bus;
             _cpu_update_NZ_flags(c, c->x);
-            return _cpu_write_zpg_fetch(c);// cuz I'm lazy
+            return _cpu_write_zpg_fetch(c); // cuz I'm lazy
         case 6: // DEC
             c->data_bus--;
             _cpu_update_NZ_flags(c, c->x);
@@ -791,7 +770,7 @@ void *_cpu_read_zpg(Cpu6502 *c) {
 
 void *_cpu_write_zpg_fetch(Cpu6502 *c) {
     c->pc += 2;
-    c->tcu = 0;
+    c->tcu      = 0;
     c->addr_bus = c->pc;
     unsetflag(c->bit_fields, PIN_READ);
     return _cpu_fetch_opcode;
@@ -805,18 +784,17 @@ void *_cpu_write_jsr_write_pclo(Cpu6502 *c) {
 }
 
 void *_cpu_write_jsr_fetch(Cpu6502 *c) {
-    c->pc = c->jsr_juggle_addr_because_im_lazy;
+    c->pc       = c->jsr_juggle_addr_because_im_lazy;
     c->addr_bus = c->pc;
-    c->tcu = 0;
+    c->tcu      = 0;
     setflag(c->bit_fields, PIN_READ);
     return _cpu_fetch_opcode;
 }
 
-void *_cpu_read_ind_read_addrhi(Cpu6502 *c)
-{
+void *_cpu_read_ind_read_addrhi(Cpu6502 *c) {
     int op_b = (c->ir & 0b00011100) >> 2;
     if (op_b == 0) { // X,ind
-        c->addr_bus = (c->pd + c->x + 1) & 0x00FF;// without carry
+        c->addr_bus = (c->pd + c->x + 1) & 0x00FF; // without carry
     }
     else if (op_b == 4) { // ind,Y
         c->addr_bus = (c->pd + 1) & 0xFF;
@@ -831,10 +809,9 @@ void *_cpu_read_ind_read_val(Cpu6502 *c) {
     }
     else if (op_b == 4) { // ind,Y
         c->addr_bus = (c->data_bus + c->y);
-        u16 before = c->addr_bus;
+        u16 before  = c->addr_bus;
         c->addr_bus += c->y;
-        if ((c->addr_bus & 0xFF00) != (before & 0xFF00))
-        {
+        if ((c->addr_bus & 0xFF00) != (before & 0xFF00)) {
             return _cpu_page_boundary;
         }
     }

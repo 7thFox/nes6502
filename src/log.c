@@ -1,9 +1,9 @@
 #include "headers/log.h"
 
 FILE *_log_file = 0;
+
 bool init_logging(const char *log_file_path) {
-    if (!(_log_file = fopen(log_file_path, "w+")))
-    {
+    if (!(_log_file = fopen(log_file_path, "w+"))) {
         fprintf(stderr, "Failed to open log file");
         return false;
     }
@@ -19,12 +19,11 @@ void end_logging() {
 
 void _print_stacktrace() {
     const int BT_BUFFER_SIZE = 255;
-    void *bt[BT_BUFFER_SIZE];
-    int nbt = backtrace(bt, BT_BUFFER_SIZE);
-    char **symbols = backtrace_symbols(bt, BT_BUFFER_SIZE);
+    void *    bt[BT_BUFFER_SIZE];
+    int       nbt     = backtrace(bt, BT_BUFFER_SIZE);
+    char **   symbols = backtrace_symbols(bt, BT_BUFFER_SIZE);
     printf("Stack Trace:\n");
-    for (int i = 0; i < nbt; i++)
-    {
+    for (int i = 0; i < nbt; i++) {
         printf("\t%s\n", symbols[i]);
     }
     free(symbols);

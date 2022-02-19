@@ -4,9 +4,9 @@ void mem_add_rom(MemoryMap *m, Rom *r, const char *name) {
     tracef("mem_add_rom \n");
     if (r->rom_size > 0) {
         m->read_blocks[m->n_read_blocks].block_name = name;
-        m->read_blocks[m->n_read_blocks].range_low = r->map_offset;
+        m->read_blocks[m->n_read_blocks].range_low  = r->map_offset;
         m->read_blocks[m->n_read_blocks].range_high = (memaddr)(r->map_offset + r->rom_size - 1);
-        m->read_blocks[m->n_read_blocks].values = r->value;
+        m->read_blocks[m->n_read_blocks].values     = r->value;
         m->n_read_blocks++;
     }
 }
@@ -15,21 +15,21 @@ void mem_add_ram(MemoryMap *m, Ram *r, const char *name) {
     tracef("mem_add_ram \n");
     if (r->size > 0) {
         m->read_blocks[m->n_read_blocks].block_name = name;
-        m->read_blocks[m->n_read_blocks].range_low = r->map_offset;
+        m->read_blocks[m->n_read_blocks].range_low  = r->map_offset;
         m->read_blocks[m->n_read_blocks].range_high = (memaddr)(r->map_offset + r->size - 1);
-        m->read_blocks[m->n_read_blocks].values = r->value;
+        m->read_blocks[m->n_read_blocks].values     = r->value;
         m->n_read_blocks++;
 
         m->write_blocks[m->n_write_blocks].block_name = name;
-        m->write_blocks[m->n_write_blocks].range_low = r->map_offset;
+        m->write_blocks[m->n_write_blocks].range_low  = r->map_offset;
         m->write_blocks[m->n_write_blocks].range_high = (memaddr)(r->map_offset + r->size - 1);
-        m->write_blocks[m->n_write_blocks].values = r->value;
+        m->write_blocks[m->n_write_blocks].values     = r->value;
         m->n_write_blocks++;
     }
 }
 
 void mem_add_ppu(MemoryMap *m, PPURegisters *p) {
-    m->_ppu = p;// :(
+    m->_ppu = p; // :(
 }
 
 MemoryBlock *mem_get_read_block(MemoryMap *m, memaddr addr) {
@@ -63,8 +63,7 @@ u8 mem_read_addr(MemoryMap *m, memaddr addr) {
     tracef("mem_read_addr \n");
 
     if (m->_ppu && addr >= 0x2000 && addr <= 0x3FFF) {
-        switch (addr % 0x08)
-        {
+        switch (addr % 0x08) {
             case 1: return m->_ppu->mask;
             case 2: return m->_ppu->status;
             case 4: return m->_ppu->oam_data;
@@ -81,8 +80,7 @@ void mem_write_addr(MemoryMap *m, memaddr addr, u8 value) {
     tracef("mem_write_addr \n");
 
     if (m->_ppu && addr >= 0x2000 && addr <= 0x3FFF) {
-        switch (addr % 0x08)
-        {
+        switch (addr % 0x08) {
             case 0: m->_ppu->controller = value; break;
             case 1: m->_ppu->mask = value; break;
             case 3: m->_ppu->oam_address = value; break;
