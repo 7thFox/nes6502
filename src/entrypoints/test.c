@@ -103,11 +103,29 @@ TestResult test_execution(ExpectedExecutionResult expected) {
 }
 
 // pre-execute's
-#define rand_range(lo, hi) ((rand() % (hi - lo + 1)) + lo)
+#define rand_range(lo, hi) ((rand() % (((hi) % 0x100) - ((lo) % 0x100) + 1)) + ((lo) % 0x100))
+#define rand_range_signed(lo, hi) (0x80 + rand_range((lo) + 0x80, (hi) + 0x80)) % 0x100
+
+testcase(ADC_imm__N0) {
+    u8 imm = rand_range(0x00, 0xFF);
+    u8 a   = rand_range(0x100 - imm, 0x17F - imm);
+    set_mem(rom_mem, 2, 0x69, imm);
+    cpu.a = a;
+    unsetflag(cpu.p, STAT_C_CARRY);
+
+    return test_execution((ExpectedExecutionResult) {
+        num_cycles: 2,
+        instruction_size: 2,
+        updates_a: true,
+        a: imm + a,
+        flags_ignore: (u8)~STAT_N_NEGATIVE,
+        flags_unset: STAT_N_NEGATIVE,
+    });
+}
 
 testcase(ADC_imm__N1) {
-    u8 imm = rand_range(0x80, 0xFF);
-    u8 a   = rand_range(0x00, (0x100 - imm) - 1);
+    u8 imm = rand_range(0x00, 0xFF);
+    u8 a   = rand_range(0x00, 0xFF - imm);
     set_mem(rom_mem, 2, 0x69, imm);
     cpu.a = a;
     unsetflag(cpu.p, STAT_C_CARRY);
@@ -119,6 +137,142 @@ testcase(ADC_imm__N1) {
         a: imm + a,
         flags_ignore: (u8)~STAT_N_NEGATIVE,
         flags_set: STAT_N_NEGATIVE,
+    });
+}
+
+testcase(ADC_imm__Z0) {
+    u8 imm = rand_range(0x00, 0xFF);
+    u8 a   = rand_range(0x01, 0xFF);
+    set_mem(rom_mem, 2, 0x69, imm);
+    cpu.a = a;
+    unsetflag(cpu.p, STAT_C_CARRY);
+
+    return test_execution((ExpectedExecutionResult) {
+        num_cycles: 2,
+        instruction_size: 2,
+        updates_a: true,
+        a: a + imm,
+        flags_ignore: (u8)~STAT_Z_ZERO,
+        flags_unset: STAT_Z_ZERO,
+    });
+}
+
+testcase(ADC_imm__Z1) {
+    u8 imm = rand_range(0x00, 0xFF);
+    u8 a   = (0x100 - imm) % 0x100;
+    set_mem(rom_mem, 2, 0x69, imm);
+    cpu.a = a;
+    unsetflag(cpu.p, STAT_C_CARRY);
+
+    return test_execution((ExpectedExecutionResult) {
+        num_cycles: 2,
+        instruction_size: 2,
+        updates_a: true,
+        a: 0,
+        flags_ignore: (u8)~STAT_Z_ZERO,
+        flags_set: STAT_Z_ZERO,
+    });
+}
+
+testcase(ADC_imm__C0) {
+    u8 imm = rand_range(0x00, 0xFF);
+    u8 a   = rand_range(0x00, 0x100 - imm);
+    set_mem(rom_mem, 2, 0x69, imm);
+    cpu.a = a;
+    unsetflag(cpu.p, STAT_C_CARRY);
+
+    return test_execution((ExpectedExecutionResult) {
+        num_cycles: 2,
+        instruction_size: 2,
+        updates_a: true,
+        a: a + imm,
+        flags_ignore: (u8)~STAT_C_CARRY,
+        flags_unset: STAT_C_CARRY,
+    });
+}
+
+testcase(ADC_imm__C1) {
+    u8 imm = rand_range(0x01, 0xFF);
+    u8 a   = rand_range(0x100 - imm, 0xFF);
+    set_mem(rom_mem, 2, 0x69, imm);
+    cpu.a = a;
+    unsetflag(cpu.p, STAT_C_CARRY);
+
+    return test_execution((ExpectedExecutionResult) {
+        num_cycles: 2,
+        instruction_size: 2,
+        updates_a: true,
+        a: (a + imm) % 0x100,
+        flags_ignore: (u8)~STAT_C_CARRY,
+        flags_set: STAT_C_CARRY,
+    });
+}
+
+testcase(ADC_imm__V0_underflow) {
+    u8 imm = rand_range(0x80, 0xFF);
+    u8 a   = rand_range_signed(0x17F - imm, 0x7F);
+    set_mem(rom_mem, 2, 0x69, imm);
+    cpu.a = a;
+    unsetflag(cpu.p, STAT_C_CARRY);
+
+    return test_execution((ExpectedExecutionResult) {
+        num_cycles: 2,
+        instruction_size: 2,
+        updates_a: true,
+        a: a + imm,
+        flags_ignore: (u8)~STAT_V_OVERFLOW,
+        flags_unset: STAT_V_OVERFLOW,
+    });
+}
+
+testcase(ADC_imm__V0_overflow) {
+    u8 imm = rand_range(0x00, 0x7F);
+    u8 a   = rand_range(0x80, 0x7F - imm);// -128, 127-x
+    set_mem(rom_mem, 2, 0x69, imm);
+    cpu.a = a;
+    unsetflag(cpu.p, STAT_C_CARRY);
+
+    return test_execution((ExpectedExecutionResult) {
+        num_cycles: 2,
+        instruction_size: 2,
+        updates_a: true,
+        a: a + imm,
+        flags_ignore: (u8)~STAT_V_OVERFLOW,
+        flags_unset: STAT_V_OVERFLOW,
+    });
+}
+
+testcase(ADC_imm__V1_underflow) {
+    u8 imm = rand_range(0x80, 0xFF);
+    u8 a   = rand_range(0x80, 0x17F - imm);
+    set_mem(rom_mem, 2, 0x69, imm);
+    cpu.a = a;
+    unsetflag(cpu.p, STAT_C_CARRY);
+
+    return test_execution((ExpectedExecutionResult) {
+        num_cycles: 2,
+        instruction_size: 2,
+        updates_a: true,
+        a: (a + imm) % 0x100,
+        flags_ignore: (u8)~STAT_V_OVERFLOW,
+        flags_set: STAT_V_OVERFLOW,
+    });
+}
+
+testcase(ADC_imm__V1_overflow) {
+    u8 imm = rand_range(0x01, 0x7F);
+    u8 a   = rand_range(0x80 - imm, 0x7F);
+    set_mem(rom_mem, 2, 0x69, imm);
+    cpu.a = a;
+    unsetflag(cpu.p, STAT_C_CARRY);
+
+    return test_execution((ExpectedExecutionResult) {
+        num_cycles: 2,
+        instruction_size: 2,
+        updates_a: true,
+        a: (a + imm) % 0x100,
+        flags_ignore: (u8)~STAT_V_OVERFLOW,
+        flags_set: STAT_V_OVERFLOW,
     });
 }
 
@@ -863,7 +1017,16 @@ int main(int argc, char *argv[]) {
         &NOP_impl,
         &JMP_abs,
 
+        &ADC_imm__N0,
         &ADC_imm__N1,
+        &ADC_imm__Z0,
+        &ADC_imm__Z1,
+        &ADC_imm__C0,
+        &ADC_imm__C1,
+        &ADC_imm__V0_underflow,
+        &ADC_imm__V0_overflow,
+        &ADC_imm__V1_underflow,
+        &ADC_imm__V1_overflow,
     };
 
     char buff[64];
