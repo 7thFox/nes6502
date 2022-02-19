@@ -1,8 +1,8 @@
-#include "stdio.h"
 #include "stdint.h"
+#include "stdio.h"
 
 // TODO: Create direct load as well instead of bin -> ascii -> bin
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     if (argc < 3) {
         fprintf(stderr, "Usage: bin2rom <src> <dest>\n");
         return 1;
@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
     fprintf(rom, "0000:\n");
     fprintf(rom, "# Converted from %s\n", argv[1]);
     u16 label = 0;
-    u8 buff[16];
+    u8  buff[16];
     int n = fread(buff, 1, 16, bin);
     while (n > 0) {
         for (int i = 0; i < n; i++) {
