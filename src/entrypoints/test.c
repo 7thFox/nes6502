@@ -12,6 +12,7 @@
 
 // Configured by flags:
 bool print_errors_only = false;
+int  n_executions      = 1;
 
 #define MAX_CYCLES_PER_OP 6
 #define RAM_OFFSET        0x0000
@@ -34,7 +35,6 @@ void set_mem(u8 *mem, int count_bytes, ...) {
 }
 
 // #define TEST_ALL_TESTS_INCLUDED
-
 #ifdef TEST_ALL_TESTS_INCLUDED
 // static functions are the only ones that error for -Wunused-function, but
 // they also don't provide info when using stacktrace(), which we use for
@@ -117,7 +117,7 @@ testcase(ADC_imm__N0) {
         num_cycles: 2,
         instruction_size: 2,
         updates_a: true,
-        a: imm + a,
+        a: (a + imm) % 0x100,
         flags_ignore: (u8)~STAT_N_NEGATIVE,
         flags_unset: STAT_N_NEGATIVE,
     });
@@ -125,6 +125,23 @@ testcase(ADC_imm__N0) {
 
 testcase(ADC_imm__N1) {
     u8 imm = rand_range(0x00, 0xFF);
+    u8 a   = rand_range(0x180 - imm, 0xFF - imm);
+    set_mem(rom_mem, 2, 0x69, imm);
+    cpu.a = a;
+    unsetflag(cpu.p, STAT_C_CARRY);
+
+    return test_execution((ExpectedExecutionResult) {
+        num_cycles: 2,
+        instruction_size: 2,
+        updates_a: true,
+        a: (a + imm) % 0x100,
+        flags_ignore: (u8)~STAT_N_NEGATIVE,
+        flags_set: STAT_N_NEGATIVE,
+    });
+}
+
+testcase(ADC_imm__Z0) {
+    u8 imm = rand_range(0x01, 0xFF);
     u8 a   = rand_range(0x00, 0xFF - imm);
     set_mem(rom_mem, 2, 0x69, imm);
     cpu.a = a;
@@ -134,24 +151,7 @@ testcase(ADC_imm__N1) {
         num_cycles: 2,
         instruction_size: 2,
         updates_a: true,
-        a: imm + a,
-        flags_ignore: (u8)~STAT_N_NEGATIVE,
-        flags_set: STAT_N_NEGATIVE,
-    });
-}
-
-testcase(ADC_imm__Z0) {
-    u8 imm = rand_range(0x00, 0xFF);
-    u8 a   = rand_range(0x01, 0xFF);
-    set_mem(rom_mem, 2, 0x69, imm);
-    cpu.a = a;
-    unsetflag(cpu.p, STAT_C_CARRY);
-
-    return test_execution((ExpectedExecutionResult) {
-        num_cycles: 2,
-        instruction_size: 2,
-        updates_a: true,
-        a: a + imm,
+        a: (a + imm) % 0x100,
         flags_ignore: (u8)~STAT_Z_ZERO,
         flags_unset: STAT_Z_ZERO,
     });
@@ -176,7 +176,7 @@ testcase(ADC_imm__Z1) {
 
 testcase(ADC_imm__C0) {
     u8 imm = rand_range(0x00, 0xFF);
-    u8 a   = rand_range(0x00, 0x100 - imm);
+    u8 a   = rand_range(0x00, 0xFF - imm);
     set_mem(rom_mem, 2, 0x69, imm);
     cpu.a = a;
     unsetflag(cpu.p, STAT_C_CARRY);
@@ -185,7 +185,7 @@ testcase(ADC_imm__C0) {
         num_cycles: 2,
         instruction_size: 2,
         updates_a: true,
-        a: a + imm,
+        a: (a + imm) % 0x100,
         flags_ignore: (u8)~STAT_C_CARRY,
         flags_unset: STAT_C_CARRY,
     });
@@ -210,7 +210,7 @@ testcase(ADC_imm__C1) {
 
 testcase(ADC_imm__V0_underflow) {
     u8 imm = rand_range(0x80, 0xFF);
-    u8 a   = rand_range_signed(0x17F - imm, 0x7F);
+    u8 a   = rand_range(0x180 - imm, 0x7F);
     set_mem(rom_mem, 2, 0x69, imm);
     cpu.a = a;
     unsetflag(cpu.p, STAT_C_CARRY);
@@ -219,14 +219,14 @@ testcase(ADC_imm__V0_underflow) {
         num_cycles: 2,
         instruction_size: 2,
         updates_a: true,
-        a: a + imm,
+        a: (a + imm) % 0x100,
         flags_ignore: (u8)~STAT_V_OVERFLOW,
         flags_unset: STAT_V_OVERFLOW,
     });
 }
 
 testcase(ADC_imm__V0_overflow) {
-    u8 imm = rand_range(0x00, 0x7F);
+    u8 imm = rand_range(0x01, 0x7F);
     u8 a   = rand_range(0x80, 0x7F - imm);// -128, 127-x
     set_mem(rom_mem, 2, 0x69, imm);
     cpu.a = a;
@@ -236,7 +236,7 @@ testcase(ADC_imm__V0_overflow) {
         num_cycles: 2,
         instruction_size: 2,
         updates_a: true,
-        a: a + imm,
+        a: (a + imm) % 0x100,
         flags_ignore: (u8)~STAT_V_OVERFLOW,
         flags_unset: STAT_V_OVERFLOW,
     });
@@ -939,11 +939,12 @@ void get_test_name(char *buff, void *test_func) {
         return (TestResult) {is_header: true}; \
     }
 
-header(__HEADER__MISC__,     "Miscellaneous Instructions");
-header(__HEADER__LOAD__,     "Load Instructions");
-header(__HEADER__TRANSFER__, "Transfer Instructions");
-header(__HEADER__INCDEC__,   "Increment/Decrement Instructions");
-header(__HEADER__FLAG__,     "Flag Set/Clear Instructions");
+header(__HEADER__ARITHMETIC__, "Arithmetic Instructions");
+header(__HEADER__LOAD__,       "Load Instructions");
+header(__HEADER__TRANSFER__,   "Transfer Instructions");
+header(__HEADER__INCDEC__,     "Increment/Decrement Instructions");
+header(__HEADER__FLAG__,       "Flag Set/Clear Instructions");
+header(__HEADER__MISC__,       "Miscellaneous Instructions");
 
 void parse_args(int argc, char *argv[]);
 void setup_all_for_tests();
@@ -954,15 +955,17 @@ int main(int argc, char *argv[]) {
     parse_args(argc, argv);
 
     TestResult (*test_functions[])() = {
-
-        &__HEADER__FLAG__,
-        &CLC_impl,
-        &CLD_impl,
-        &CLI_impl,
-        &CLV_impl,
-        &SEC_impl,
-        &SED_impl,
-        &SEI_impl,
+        &__HEADER__ARITHMETIC__,
+        &ADC_imm__N0,
+        &ADC_imm__N1,
+        &ADC_imm__Z0,
+        &ADC_imm__Z1,
+        &ADC_imm__C0,
+        &ADC_imm__C1,
+        &ADC_imm__V0_underflow,
+        &ADC_imm__V0_overflow,
+        &ADC_imm__V1_underflow,
+        &ADC_imm__V1_overflow,
 
         &__HEADER__LOAD__,
         &LDA_imm__N0Z0,
@@ -994,39 +997,34 @@ int main(int argc, char *argv[]) {
         &TYA_imm__N1Z0,
 
         &__HEADER__INCDEC__,
-
         &INX_impl__N0Z0,
         &INX_impl__N0Z0_boundary,
         &INX_impl__N0Z1,
         &INX_impl__N1Z0,
         &INX_impl__N1Z0_boundary,
-
         &DEX_impl__N0Z0,
         &DEX_impl__N0Z0_boundary,
         &DEX_impl__N0Z1,
         &DEX_impl__N1Z0,
         &DEX_impl__N1Z0_boundary,
-
         &DEY_impl__N0Z0,
         &DEY_impl__N0Z0_boundary,
         &DEY_impl__N0Z1,
         &DEY_impl__N1Z0,
         &DEY_impl__N1Z0_boundary,
 
+        &__HEADER__FLAG__,
+        &CLC_impl,
+        &CLD_impl,
+        &CLI_impl,
+        &CLV_impl,
+        &SEC_impl,
+        &SED_impl,
+        &SEI_impl,
+
         &__HEADER__MISC__,
         &NOP_impl,
         &JMP_abs,
-
-        &ADC_imm__N0,
-        &ADC_imm__N1,
-        &ADC_imm__Z0,
-        &ADC_imm__Z1,
-        &ADC_imm__C0,
-        &ADC_imm__C1,
-        &ADC_imm__V0_underflow,
-        &ADC_imm__V0_overflow,
-        &ADC_imm__V1_underflow,
-        &ADC_imm__V1_overflow,
     };
 
     char buff[64];
@@ -1064,7 +1062,12 @@ int main(int argc, char *argv[]) {
 
         reset_for_test();
         clock_t    start_test = clock();
-        TestResult result     = test();
+        TestResult result;
+        for (int n = 0; n < n_executions; n++)
+        {
+            result = test();
+            if (!result.is_success) break;
+        }
         clock_t    end_test   = clock();
 
         if (!print_errors_only || (!result.is_header && !result.is_success)) {
@@ -1131,9 +1134,11 @@ void parse_args(int argc, char *argv[]) {
         arg("--seed",        1, { seed = (unsigned int)atoi(argv[i + 1]); });
         arg("--errors-only", 0, { print_errors_only = true; });
         arg("-e",            0, { print_errors_only = true; });
+        arg("-n",            1, { n_executions = atoi(argv[i+1]); });
     }
 
-    printf("rand seed: %i\n", seed);
+    printf("rand seed:  %i\n", seed);
+    printf("executions: %i\n", n_executions);
     srand(seed);
 }
 
