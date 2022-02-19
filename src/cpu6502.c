@@ -339,7 +339,9 @@ void *_cpu_fetch_lo(Cpu6502 *c) {
                 case 2: // impl
                     switch (op_a) {
                         case 0: // ASL
+                            setunsetflag(c->p, STAT_C_CARRY, (c->a & 0x80) == 0x80);
                             c->a <<= 1;
+                            _cpu_update_NZ_flags(c, c->a);
                             break;
                         case 1: // ROL
                             c->a = (c->a << 1) | (c->a >> 7);
@@ -716,7 +718,7 @@ void *_cpu_read_zpg(Cpu6502 *c) {
     switch (op_c) {
         case 0: // ASL
         {
-            u8 carry    = c->data_bus >> 7 & 0x01;
+            u8 carry    = c->data_bus >> 7 == 0x01;
             c->data_bus = c->data_bus << 1;
             setunsetflag(c->p, STAT_C_CARRY, carry);
             _cpu_update_NZ_flags(c, c->data_bus);

@@ -333,6 +333,93 @@ testcase(AND_imm__Z1N0) {
     });
 }
 
+testcase(ASL_acc__N0Z0C0) {
+    u8 a = rand_range(0x01, 0x3F); // 00xx xxxx
+    set_mem(rom_mem, 1, 0x0A);
+    cpu.a = a;
+
+    return test_execution((ExpectedExecutionResult) {
+        num_cycles: 2,
+        instruction_size: 1,
+        updates_a: true,
+        a: a << 1,
+        flags_unset: STAT_N_NEGATIVE | STAT_Z_ZERO | STAT_C_CARRY,
+    });
+}
+
+testcase(ASL_acc__N0Z0C1) {
+    u8 a = rand_range(0x01, 0x3F) | 0x80; // 10xx xxxx
+    set_mem(rom_mem, 1, 0x0A);
+    cpu.a = a;
+
+    return test_execution((ExpectedExecutionResult) {
+        num_cycles: 2,
+        instruction_size: 1,
+        updates_a: true,
+        a: a << 1,
+        flags_set: STAT_C_CARRY,
+        flags_unset: STAT_N_NEGATIVE | STAT_Z_ZERO,
+    });
+}
+
+testcase(ASL_acc__N0Z1C0) {
+    set_mem(rom_mem, 1, 0x0A);
+    cpu.a = 0x00;
+
+    return test_execution((ExpectedExecutionResult) {
+        num_cycles: 2,
+        instruction_size: 1,
+        updates_a: true,
+        a: 0x00,
+        flags_set: STAT_Z_ZERO,
+        flags_unset: STAT_N_NEGATIVE | STAT_C_CARRY,
+    });
+}
+
+testcase(ASL_acc__N0Z1C1) {
+    set_mem(rom_mem, 1, 0x0A);
+    cpu.a = 0x80;
+
+    return test_execution((ExpectedExecutionResult) {
+        num_cycles: 2,
+        instruction_size: 1,
+        updates_a: true,
+        a: 0x00,
+        flags_set: STAT_Z_ZERO | STAT_C_CARRY,
+        flags_unset: STAT_N_NEGATIVE,
+    });
+}
+
+testcase(ASL_acc__N1Z0C0) {
+    u8 a = rand_range(0x01, 0x3F) | 0x40; // 01xx xxxx
+    set_mem(rom_mem, 1, 0x0A);
+    cpu.a = a;
+
+    return test_execution((ExpectedExecutionResult) {
+        num_cycles: 2,
+        instruction_size: 1,
+        updates_a: true,
+        a: a << 1,
+        flags_set: STAT_N_NEGATIVE,
+        flags_unset: STAT_Z_ZERO | STAT_C_CARRY,
+    });
+}
+
+testcase(ASL_acc__N1Z0C1) {
+    u8 a = rand_range(0x01, 0x3F) | 0xC0; // 11xx xxxx
+    set_mem(rom_mem, 1, 0x0A);
+    cpu.a = a;
+
+    return test_execution((ExpectedExecutionResult) {
+        num_cycles: 2,
+        instruction_size: 1,
+        updates_a: true,
+        a: a << 1,
+        flags_set: STAT_N_NEGATIVE | STAT_C_CARRY,
+        flags_unset: STAT_Z_ZERO,
+    });
+}
+
 testcase(CLC_impl) {
     set_mem(rom_mem, 1, 0x18);
     setflag(cpu.p, STAT_C_CARRY);
@@ -1023,6 +1110,14 @@ int main(int argc, char *argv[]) {
         &ADC_imm__V0_overflow,
         &ADC_imm__V1_underflow,
         &ADC_imm__V1_overflow,
+
+        &ASL_acc__N0Z0C0,
+        &ASL_acc__N0Z0C1,
+        &ASL_acc__N0Z1C0,
+        &ASL_acc__N0Z1C1,
+        &ASL_acc__N1Z0C0,
+        &ASL_acc__N1Z0C1,
+
         &INX_impl__N0Z0,
         &INX_impl__N0Z0_boundary,
         &INX_impl__N0Z1,
