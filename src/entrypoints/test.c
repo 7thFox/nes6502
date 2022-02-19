@@ -1096,95 +1096,14 @@ TestResult compare_execution(ExecutionResult         actual,
         }                                                                          \
     }
 
+    check_flag(expected, actual, STAT_N_NEGATIVE, "N");
+    check_flag(expected, actual, STAT_V_OVERFLOW, "V");
+    check_flag(expected, actual, STAT___IGNORE, "_");
+    check_flag(expected, actual, STAT_B_BREAK, "B");
+    check_flag(expected, actual, STAT_D_DECIMAL, "D");
+    check_flag(expected, actual, STAT_I_INTERRUPT, "I");
+    check_flag(expected, actual, STAT_Z_ZERO, "Z");
     check_flag(expected, actual, STAT_C_CARRY, "C");
-
-    if ((expected.flags_set & STAT_C_CARRY) == STAT_C_CARRY) {
-        assert_equals(STAT_C_CARRY, actual.p1 & STAT_C_CARRY, "Flag C");
-    }
-    else if ((expected.flags_unset & STAT_C_CARRY) == STAT_C_CARRY) {
-        assert_equals(0, actual.p1 & STAT_C_CARRY, "Flag C");
-    }
-    else {
-        assert_equals(actual.p0 & STAT_C_CARRY, actual.p1 & STAT_C_CARRY,
-                      "Flag C (unchanged)");
-    }
-
-    if ((expected.flags_set & STAT_Z_ZERO) == STAT_Z_ZERO) {
-        assert_equals(STAT_Z_ZERO, actual.p1 & STAT_Z_ZERO, "Flag Z");
-    }
-    else if ((expected.flags_unset & STAT_Z_ZERO) == STAT_Z_ZERO) {
-        assert_equals(0, actual.p1 & STAT_Z_ZERO, "Flag Z");
-    }
-    else {
-        assert_equals(actual.p0 & STAT_Z_ZERO, actual.p1 & STAT_Z_ZERO,
-                      "Flag Z (unchanged)");
-    }
-
-    if ((expected.flags_set & STAT_I_INTERRUPT) == STAT_I_INTERRUPT) {
-        assert_equals(STAT_I_INTERRUPT, actual.p1 & STAT_I_INTERRUPT, "Flag I");
-    }
-    else if ((expected.flags_unset & STAT_I_INTERRUPT) == STAT_I_INTERRUPT) {
-        assert_equals(0, actual.p1 & STAT_I_INTERRUPT, "Flag I");
-    }
-    else {
-        assert_equals(actual.p0 & STAT_I_INTERRUPT,
-                      actual.p1 & STAT_I_INTERRUPT, "Flag I (unchanged)");
-    }
-
-    if ((expected.flags_set & STAT_D_DECIMAL) == STAT_D_DECIMAL) {
-        assert_equals(STAT_D_DECIMAL, actual.p1 & STAT_D_DECIMAL, "Flag D");
-    }
-    else if ((expected.flags_unset & STAT_D_DECIMAL) == STAT_D_DECIMAL) {
-        assert_equals(0, actual.p1 & STAT_D_DECIMAL, "Flag D");
-    }
-    else {
-        assert_equals(actual.p0 & STAT_D_DECIMAL, actual.p1 & STAT_D_DECIMAL,
-                      "Flag D (unchanged)");
-    }
-
-    if ((expected.flags_set & STAT_B_BREAK) == STAT_B_BREAK) {
-        assert_equals(STAT_B_BREAK, actual.p1 & STAT_B_BREAK, "Flag B");
-    }
-    else if ((expected.flags_unset & STAT_B_BREAK) == STAT_B_BREAK) {
-        assert_equals(0, actual.p1 & STAT_B_BREAK, "Flag B");
-    }
-    else {
-        assert_equals(actual.p0 & STAT_B_BREAK, actual.p1 & STAT_B_BREAK,
-                      "Flag B (unchanged)");
-    }
-
-    if ((expected.flags_set & STAT___IGNORE) == STAT___IGNORE) {
-        assert_equals(STAT___IGNORE, actual.p1 & STAT___IGNORE, "Flag _");
-    }
-    else if ((expected.flags_unset & STAT___IGNORE) == STAT___IGNORE) {
-        assert_equals(0, actual.p1 & STAT___IGNORE, "Flag _");
-    }
-    else {
-        assert_equals(actual.p0 & STAT___IGNORE, actual.p1 & STAT___IGNORE,
-                      "Flag _ (unchanged)");
-    }
-
-    if ((expected.flags_set & STAT_V_OVERFLOW) == STAT_V_OVERFLOW) {
-        assert_equals(STAT_V_OVERFLOW, actual.p1 & STAT_V_OVERFLOW, "Flag V");
-    }
-    else if ((expected.flags_unset & STAT_V_OVERFLOW) == STAT_V_OVERFLOW) {
-        assert_equals(0, actual.p1 & STAT_V_OVERFLOW, "Flag V");
-    }
-    else {
-        assert_equals(actual.p0 & STAT_V_OVERFLOW, actual.p1 & STAT_V_OVERFLOW,
-                      "Flag V (unchanged)");
-    }
-
-    if ((expected.flags_set & STAT_N_NEGATIVE) == STAT_N_NEGATIVE) {
-        assert_equals(STAT_N_NEGATIVE, actual.p1 & STAT_N_NEGATIVE, "Flag N");
-    }
-    else if ((expected.flags_unset & STAT_N_NEGATIVE) == STAT_N_NEGATIVE) {
-        assert_equals(0, actual.p1 & STAT_N_NEGATIVE, "Flag N");
-    }
-    else {
-        assert_equals(actual.p0 & STAT_N_NEGATIVE, actual.p1 & STAT_N_NEGATIVE,
-                      "Flag N (unchanged)");
-    }
 
     return (TestResult) {is_success: true};
 }
