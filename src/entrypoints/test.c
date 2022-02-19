@@ -1083,11 +1083,15 @@ void get_test_name(char *buff, void *test_func) {
         return (TestResult) {is_header: true}; \
     }
 
+header(__HEADER__TRANSFER__,   "Load/Transfer Instructions");
+header(__HEADER__STACK__,      "Stack Instructions");
+header(__HEADER__INCDEC__,     "Increment/Decrement Instructions");
 header(__HEADER__ARITHMETIC__, "Arithmetic Instructions");
 header(__HEADER__LOGIC__,      "Logical Instructions");
-header(__HEADER__LOAD__,       "Load Instructions");
-header(__HEADER__TRANSFER__,   "Transfer Instructions");
-header(__HEADER__FLAG__,       "Flag Set/Clear Instructions");
+header(__HEADER__SHIFT__,      "Shift/Rotate Instructions");
+header(__HEADER__FLAG__,       "Flag Instructions");
+header(__HEADER__COMP__,       "Comparison Instructions");
+header(__HEADER__BRANCH__,     "Branch Instructions");
 header(__HEADER__MISC__,       "Miscellaneous Instructions");
 
 void parse_args(int argc, char *argv[]);
@@ -1099,47 +1103,8 @@ int main(int argc, char *argv[]) {
     parse_args(argc, argv);
 
     TestResult (*test_functions[])() = {
-        &__HEADER__ARITHMETIC__,
-        &ADC_imm__N0,
-        &ADC_imm__N1,
-        &ADC_imm__Z0,
-        &ADC_imm__Z1,
-        &ADC_imm__C0,
-        &ADC_imm__C1,
-        &ADC_imm__V0_underflow,
-        &ADC_imm__V0_overflow,
-        &ADC_imm__V1_underflow,
-        &ADC_imm__V1_overflow,
 
-        &ASL_acc__N0Z0C0,
-        &ASL_acc__N0Z0C1,
-        &ASL_acc__N0Z1C0,
-        &ASL_acc__N0Z1C1,
-        &ASL_acc__N1Z0C0,
-        &ASL_acc__N1Z0C1,
-
-        &INX_impl__N0Z0,
-        &INX_impl__N0Z0_boundary,
-        &INX_impl__N0Z1,
-        &INX_impl__N1Z0,
-        &INX_impl__N1Z0_boundary,
-        &DEX_impl__N0Z0,
-        &DEX_impl__N0Z0_boundary,
-        &DEX_impl__N0Z1,
-        &DEX_impl__N1Z0,
-        &DEX_impl__N1Z0_boundary,
-        &DEY_impl__N0Z0,
-        &DEY_impl__N0Z0_boundary,
-        &DEY_impl__N0Z1,
-        &DEY_impl__N1Z0,
-        &DEY_impl__N1Z0_boundary,
-
-        &__HEADER__LOGIC__,
-        &AND_imm__Z0N0,
-        &AND_imm__Z0N1,
-        &AND_imm__Z1N0,
-
-        &__HEADER__LOAD__,
+    &__HEADER__TRANSFER__,
         &LDA_imm__N0Z0,
         &LDA_imm__N0Z1,
         &LDA_imm__N1Z0,
@@ -1149,8 +1114,9 @@ int main(int argc, char *argv[]) {
         &LDY_imm__N0Z0,
         &LDY_imm__N0Z1,
         &LDY_imm__N1Z0,
-
-        &__HEADER__TRANSFER__,
+        // STA
+        // STX
+        // STY
         &TAX_imm__N0Z0,
         &TAX_imm__N0Z1,
         &TAX_imm__N1Z0,
@@ -1168,7 +1134,64 @@ int main(int argc, char *argv[]) {
         &TYA_imm__N0Z1,
         &TYA_imm__N1Z0,
 
-        &__HEADER__FLAG__,
+    &__HEADER__STACK__,
+        // PHA
+        // PHP
+        // PLA
+        // PLP
+
+    &__HEADER__INCDEC__,
+        // DEC
+        &DEX_impl__N0Z0,
+        &DEX_impl__N0Z0_boundary,
+        &DEX_impl__N0Z1,
+        &DEX_impl__N1Z0,
+        &DEX_impl__N1Z0_boundary,
+        &DEY_impl__N0Z0,
+        &DEY_impl__N0Z0_boundary,
+        &DEY_impl__N0Z1,
+        &DEY_impl__N1Z0,
+        &DEY_impl__N1Z0_boundary,
+        // INC
+        &INX_impl__N0Z0,
+        &INX_impl__N0Z0_boundary,
+        &INX_impl__N0Z1,
+        &INX_impl__N1Z0,
+        &INX_impl__N1Z0_boundary,
+        // INY
+
+    &__HEADER__ARITHMETIC__,
+        &ADC_imm__N0,
+        &ADC_imm__N1,
+        &ADC_imm__Z0,
+        &ADC_imm__Z1,
+        &ADC_imm__C0,
+        &ADC_imm__C1,
+        &ADC_imm__V0_underflow,
+        &ADC_imm__V0_overflow,
+        &ADC_imm__V1_underflow,
+        &ADC_imm__V1_overflow,
+        // SBC
+
+    &__HEADER__LOGIC__,
+        &AND_imm__Z0N0,
+        &AND_imm__Z0N1,
+        &AND_imm__Z1N0,
+        // EOR
+        // ORA
+
+    &__HEADER__SHIFT__,
+        &ASL_acc__N0Z0C0,
+        &ASL_acc__N0Z0C1,
+        &ASL_acc__N0Z1C0,
+        &ASL_acc__N0Z1C1,
+        &ASL_acc__N1Z0C0,
+        &ASL_acc__N1Z0C1,
+        // LSR
+        // ROL
+        // ROR
+
+    &__HEADER__FLAG__,
         &CLC_impl,
         &CLD_impl,
         &CLI_impl,
@@ -1176,10 +1199,29 @@ int main(int argc, char *argv[]) {
         &SEC_impl,
         &SED_impl,
         &SEI_impl,
+    &__HEADER__COMP__,
+        // CMP
+        // CPX
+        // CPY
 
-        &__HEADER__MISC__,
-        &NOP_impl,
+    &__HEADER__BRANCH__,
+        // BCC
+        // BCS
+        // BEQ
+        // BMI
+        // BNE
+        // BPL
+        // BVC
+        // BVS
+
+    &__HEADER__MISC__,
         &JMP_abs,
+        // JSR
+        // RTS
+        // BRK
+        // RTI
+        // BIT
+        &NOP_impl,
     };
 
     char buff[64];
