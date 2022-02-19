@@ -4,7 +4,7 @@
 #include "common.h"
 #include "memmap.h"
 
-#define setflag(p, f) p |= f
+#define setflag(p, f)   p |= f
 #define unsetflag(p, f) p &= ~(f);
 #define setunsetflag(p, f, c) \
     if (c)                    \
@@ -13,14 +13,14 @@
         unsetflag(p, f);
 
 typedef enum {
-    STAT_N_NEGATIVE     = 0x80,
-    STAT_V_OVERFLOW     = 0x40,
-    STAT___IGNORE       = 0x20,
-    STAT_B_BREAK        = 0x10,
-    STAT_D_DECIMAL      = 0x08,
-    STAT_I_INTERRUPT    = 0x04,
-    STAT_Z_ZERO         = 0x02,
-    STAT_C_CARRY        = 0x01,
+    STAT_N_NEGATIVE  = 0x80,
+    STAT_V_OVERFLOW  = 0x40,
+    STAT___IGNORE    = 0x20,
+    STAT_B_BREAK     = 0x10,
+    STAT_D_DECIMAL   = 0x08,
+    STAT_I_INTERRUPT = 0x04,
+    STAT_Z_ZERO      = 0x02,
+    STAT_C_CARRY     = 0x01,
 } StatusFlags;
 
 typedef enum {
@@ -30,25 +30,25 @@ typedef enum {
 } CpuSinglePins;
 
 typedef struct {
-    u8 ir;  // Instruction Register
-    u8 tcu; // Timing Control Unit
-    u16 pc; // Program Counter
-    u8 x;
-    u8 y;
-    u8 a;   // Accumulator
-    u8 sp;  // Stack Pointer
-    u8 p;   // Status Flags
-    u8 pd;  // Input Data Latch
+    u8  ir;  // Instruction Register
+    u8  tcu; // Timing Control Unit
+    u16 pc;  // Program Counter
+    u8  x;
+    u8  y;
+    u8  a;  // Accumulator
+    u8  sp; // Stack Pointer
+    u8  p;  // Status Flags
+    u8  pd; // Input Data Latch
 
     u16 jsr_juggle_addr_because_im_lazy;
 
     u8 bit_fields;
 
-    memaddr addr_bus;
-    u8 data_bus;
+    memaddr    addr_bus;
+    u8         data_bus;
     MemoryMap *memmap;
 
-    void* (*on_next_clock)(void*);
+    void *(*on_next_clock)(void *);
 } Cpu6502;
 
 void cpu_pulse(Cpu6502 *c);

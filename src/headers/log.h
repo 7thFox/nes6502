@@ -1,20 +1,20 @@
 #ifndef LOG_H
 #define LOG_H
 
-#define LOG_LEVEL_NONE 0
+#define LOG_LEVEL_NONE    0
 #define LOG_LEVEL_MINIMAL 1
-#define LOG_LEVEL_NORMAL 2
-#define LOG_LEVEL_DEBUG 3
-#define LOG_LEVEL_TRACE 4
+#define LOG_LEVEL_NORMAL  2
+#define LOG_LEVEL_DEBUG   3
+#define LOG_LEVEL_TRACE   4
 
 #define LOG_LEVEL LOG_LEVEL_TRACE
 // #define LOG_LEVEL LOG_LEVEL_DEBUG
 
-#include "stdio.h"
-#include "stdbool.h"
-#include "signal.h"
-#include "stdlib.h"
 #include "execinfo.h"
+#include "signal.h"
+#include "stdbool.h"
+#include "stdio.h"
+#include "stdlib.h"
 
 // Define and set in entrypoint
 extern FILE *_log_file;

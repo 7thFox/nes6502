@@ -2,18 +2,17 @@
 #define DISASM_H
 
 #include "common.h"
-
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
 
 typedef struct {
-#define N_MAX_DISASM 64
-#define N_MAX_TEXT_SIZE 20// "OPC $LLHH,X (65535)" = 19 + \0
-#define N_MAX_BYTE_SIZE 10// "00 00 00 "     = 9 + \0
-    char    _disasm_text[N_MAX_DISASM][N_MAX_TEXT_SIZE];
-    u8 _disasm_offsets[N_MAX_DISASM];// N_MAX_DISASM <= 85
-    char    _disasm_bytes[N_MAX_DISASM][N_MAX_BYTE_SIZE];
+#define N_MAX_DISASM    64
+#define N_MAX_TEXT_SIZE 20 // "OPC $LLHH,X (65535)" = 19 + \0
+#define N_MAX_BYTE_SIZE 10 // "00 00 00 "     = 9 + \0
+    char _disasm_text[N_MAX_DISASM][N_MAX_TEXT_SIZE];
+    u8   _disasm_offsets[N_MAX_DISASM]; // N_MAX_DISASM <= 85
+    char _disasm_bytes[N_MAX_DISASM][N_MAX_BYTE_SIZE];
 } Disassembler;
 
 typedef struct {
