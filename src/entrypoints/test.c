@@ -77,6 +77,7 @@ typedef struct {
     int num_cycles;
     int instruction_size;
 
+    u8 flags_ignore;
     u8 flags_set;
     u8 flags_unset;
 
@@ -98,6 +99,23 @@ TestResult test_execution(ExpectedExecutionResult expected) { return compare_exe
 
 // pre-execute's
 #define rand_range(lo, hi) ((rand() % (hi - lo + 1)) + lo)
+
+testcase(ADC_imm__N1) {
+    u8 imm = rand_range(0x80, 0xFF);
+    u8 a   = rand_range(0x00, (0x100 - imm) - 1);
+    set_mem(rom_mem, 2, 0x69, imm);
+    cpu.a = a;
+    unsetflag(cpu.p, STAT_C_CARRY);
+
+    return test_execution((ExpectedExecutionResult){
+        num_cycles : 2,
+        instruction_size : 2,
+        updates_a: true,
+        a: imm + a,
+        flags_ignore: (u8)~STAT_N_NEGATIVE,
+        flags_set : STAT_N_NEGATIVE,
+    });
+}
 
 testcase(CLC_impl) {
     set_mem(rom_mem, 1, 0x18);
@@ -839,6 +857,8 @@ int main(int argc, char* argv[]) {
         &__HEADER__MISC__,
         &NOP_impl,
         &JMP_abs,
+
+        &ADC_imm__N1,
     };
 
     char buff[64];
@@ -1068,6 +1088,20 @@ TestResult compare_execution(
         assert_equals(actual.sp0, actual.sp1, "Register SP (unchanged)");
     }
 
+#define check_flag(e, a, flag, flagStr)                                            \
+    if ((e.flags_ignore & flag) != flag) {                                         \
+        if ((e.flags_set & flag) == flag) {                                        \
+            assert_equals(flag, a.p1 &flag, "Flag " flagStr);                      \
+        }                                                                          \
+        else if ((e.flags_unset & flag) == flag) {                                 \
+            assert_equals(0, a.p1 &flag, "Flag " flagStr);                         \
+        }                                                                          \
+        else {                                                                     \
+            assert_equals(a.p0 &flag, a.p1 &flag, "Flag " flagStr " (unchanged)"); \
+        }                                                                          \
+    }
+
+    check_flag(expected, actual, STAT_C_CARRY, "C");
 
     if ((expected.flags_set & STAT_C_CARRY) == STAT_C_CARRY) {
         assert_equals(STAT_C_CARRY, actual.p1 & STAT_C_CARRY, "Flag C");
