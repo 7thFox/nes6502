@@ -1096,14 +1096,14 @@ TestResult compare_execution(ExecutionResult         actual,
         }                                                                          \
     }
 
-    check_flag(expected, actual, STAT_N_NEGATIVE, "N");
-    check_flag(expected, actual, STAT_V_OVERFLOW, "V");
-    check_flag(expected, actual, STAT___IGNORE, "_");
-    check_flag(expected, actual, STAT_B_BREAK, "B");
-    check_flag(expected, actual, STAT_D_DECIMAL, "D");
+    check_flag(expected, actual, STAT_N_NEGATIVE,  "N");
+    check_flag(expected, actual, STAT_V_OVERFLOW,  "V");
+    check_flag(expected, actual, STAT___IGNORE,    "_");
+    check_flag(expected, actual, STAT_B_BREAK,     "B");
+    check_flag(expected, actual, STAT_D_DECIMAL,   "D");
     check_flag(expected, actual, STAT_I_INTERRUPT, "I");
-    check_flag(expected, actual, STAT_Z_ZERO, "Z");
-    check_flag(expected, actual, STAT_C_CARRY, "C");
+    check_flag(expected, actual, STAT_Z_ZERO,      "Z");
+    check_flag(expected, actual, STAT_C_CARRY,     "C");
 
     return (TestResult) {is_success: true};
 }
