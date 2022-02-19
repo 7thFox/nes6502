@@ -1,10 +1,10 @@
-#include "stdio.h"
-#include "stdint.h"
 #include "stdbool.h"
+#include "stdint.h"
+#include "stdio.h"
 
 typedef enum {
-    M_HORIZONTAL = 0,
-    M_VERTICAL = 1,
+    M_HORIZONTAL  = 0,
+    M_VERTICAL    = 1,
     M_FOUR_SCREEN = 2,
 } PPUMirroring;
 
@@ -16,7 +16,7 @@ typedef enum {
 // } TVSystem;
 
 // TODO: Create direct load as well instead of bin -> ascii -> bin
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     if (argc < 3) {
         fprintf(stderr, "Usage: ines2rom <src> <prg-dest>\n");
         return 1;
@@ -46,8 +46,7 @@ int main(int argc, char* argv[]) {
     if (header[0] != 'N' ||
         header[1] != 'E' ||
         header[2] != 'S' ||
-        header[3] != 0x1A)
-    {
+        header[3] != 0x1A) {
         fprintf(stderr, "Did not match iNES header\n");
         return 1;
     }
@@ -55,17 +54,18 @@ int main(int argc, char* argv[]) {
     u8 prg_size_val = header[4];
     u8 chr_size_val = header[5];
 
-    u8 flags6 = header[6];
-    PPUMirroring mirroring = flags6 & 0x01;
-    bool hasCartridgeRAM = (flags6 & 0x02) == 0x02;
-    bool hasTrainer = (flags6 & 0x04) == 0x04;
-    if ((flags6 & 0x08) == 0x08) mirroring = M_FOUR_SCREEN;
+    u8           flags6          = header[6];
+    PPUMirroring mirroring       = flags6 & 0x01;
+    bool         hasCartridgeRAM = (flags6 & 0x02) == 0x02;
+    bool         hasTrainer      = (flags6 & 0x04) == 0x04;
+    if ((flags6 & 0x08) == 0x08)
+        mirroring = M_FOUR_SCREEN;
     u8 mapper = (flags6 >> 4);
 
-    u8 flags7 = header[7];
-    bool hasVSUnisystem = (flags7 & 0x01) == 0x01;
+    u8   flags7          = header[7];
+    bool hasVSUnisystem  = (flags7 & 0x01) == 0x01;
     bool hasPlayChoice10 = (flags7 & 0x02) == 0x02;
-    bool isNES2 = ((flags7 & 0x0F) >> 2) == 2;
+    bool isNES2          = ((flags7 & 0x0F) >> 2) == 2;
     mapper |= flags7 & 0xF0;
 
     u8 prg_ram_size = header[8];
@@ -107,23 +107,23 @@ int main(int argc, char* argv[]) {
 
     fprintf(rom_prg, "8000:\n");
     fprintf(rom_prg, "# Converted from %s (PRG-ROM)\n", argv[1]);
-    for (int i = 0; i < 1024 * prg_size_val; i++){
+    for (int i = 0; i < 1024 * prg_size_val; i++) {
         fread(buff, 1, 16, ines);
         for (int i = 0; i < 16; i++) {
             fprintf(rom_prg, "%02X ", buff[i]);
         }
-        fprintf(rom_prg, "# $%04x\n", 0x8000 + i*16);
+        fprintf(rom_prg, "# $%04x\n", 0x8000 + i * 16);
     }
 
     if (prg_size_val == 1) {
         fprintf(rom_prg, "\n# Begin Mirroring\n\n");
-        fseek(ines, 16, SEEK_SET);// move to beginning of PRG ROM
-        for (int i = 0; i < 1024 * prg_size_val; i++){
+        fseek(ines, 16, SEEK_SET); // move to beginning of PRG ROM
+        for (int i = 0; i < 1024 * prg_size_val; i++) {
             fread(buff, 1, 16, ines);
             for (int i = 0; i < 16; i++) {
                 fprintf(rom_prg, "%02X ", buff[i]);
             }
-            fprintf(rom_prg, "# $%04x\n", 0xC000 + i*16);
+            fprintf(rom_prg, "# $%04x\n", 0xC000 + i * 16);
         }
     }
 
