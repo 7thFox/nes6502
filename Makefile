@@ -5,6 +5,10 @@ test: bin
 	gcc -rdynamic -Wall -Wunused-function -Wextra -Werror src/*.c src/entrypoints/test.c -o bin/test
 	bin/test
 
+test1000: bin
+	gcc -rdynamic -Wall -Wunused-function -Wextra -Werror src/*.c src/entrypoints/test.c -o bin/test
+	bin/test -n 1000
+
 testerrors: bin
 	gcc -rdynamic -Wall -Wunused-function -Wextra -Werror src/*.c src/entrypoints/test.c -o bin/test
 	bin/test --errors-only

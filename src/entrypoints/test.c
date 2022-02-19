@@ -118,7 +118,7 @@ testcase(ADC_imm__N0) {
         instruction_size: 2,
         updates_a: true,
         a: (a + imm) % 0x100,
-        flags_ignore: (u8)~STAT_N_NEGATIVE,
+        flags_ignore: STAT_Z_ZERO | STAT_C_CARRY | STAT_V_OVERFLOW,
         flags_unset: STAT_N_NEGATIVE,
     });
 }
@@ -135,7 +135,7 @@ testcase(ADC_imm__N1) {
         instruction_size: 2,
         updates_a: true,
         a: (a + imm) % 0x100,
-        flags_ignore: (u8)~STAT_N_NEGATIVE,
+        flags_ignore: STAT_Z_ZERO | STAT_C_CARRY | STAT_V_OVERFLOW,
         flags_set: STAT_N_NEGATIVE,
     });
 }
@@ -152,7 +152,7 @@ testcase(ADC_imm__Z0) {
         instruction_size: 2,
         updates_a: true,
         a: (a + imm) % 0x100,
-        flags_ignore: (u8)~STAT_Z_ZERO,
+        flags_ignore: STAT_N_NEGATIVE | STAT_C_CARRY | STAT_V_OVERFLOW,
         flags_unset: STAT_Z_ZERO,
     });
 }
@@ -169,7 +169,7 @@ testcase(ADC_imm__Z1) {
         instruction_size: 2,
         updates_a: true,
         a: 0,
-        flags_ignore: (u8)~STAT_Z_ZERO,
+        flags_ignore: STAT_N_NEGATIVE | STAT_C_CARRY | STAT_V_OVERFLOW,
         flags_set: STAT_Z_ZERO,
     });
 }
@@ -186,7 +186,7 @@ testcase(ADC_imm__C0) {
         instruction_size: 2,
         updates_a: true,
         a: (a + imm) % 0x100,
-        flags_ignore: (u8)~STAT_C_CARRY,
+        flags_ignore: STAT_N_NEGATIVE | STAT_Z_ZERO | STAT_V_OVERFLOW,
         flags_unset: STAT_C_CARRY,
     });
 }
@@ -203,7 +203,7 @@ testcase(ADC_imm__C1) {
         instruction_size: 2,
         updates_a: true,
         a: (a + imm) % 0x100,
-        flags_ignore: (u8)~STAT_C_CARRY,
+        flags_ignore: STAT_N_NEGATIVE | STAT_Z_ZERO | STAT_V_OVERFLOW,
         flags_set: STAT_C_CARRY,
     });
 }
@@ -220,7 +220,7 @@ testcase(ADC_imm__V0_underflow) {
         instruction_size: 2,
         updates_a: true,
         a: (a + imm) % 0x100,
-        flags_ignore: (u8)~STAT_V_OVERFLOW,
+        flags_ignore: STAT_N_NEGATIVE | STAT_Z_ZERO | STAT_C_CARRY,
         flags_unset: STAT_V_OVERFLOW,
     });
 }
@@ -237,7 +237,7 @@ testcase(ADC_imm__V0_overflow) {
         instruction_size: 2,
         updates_a: true,
         a: (a + imm) % 0x100,
-        flags_ignore: (u8)~STAT_V_OVERFLOW,
+        flags_ignore: STAT_N_NEGATIVE | STAT_Z_ZERO | STAT_C_CARRY,
         flags_unset: STAT_V_OVERFLOW,
     });
 }
@@ -254,7 +254,7 @@ testcase(ADC_imm__V1_underflow) {
         instruction_size: 2,
         updates_a: true,
         a: (a + imm) % 0x100,
-        flags_ignore: (u8)~STAT_V_OVERFLOW,
+        flags_ignore: STAT_N_NEGATIVE | STAT_Z_ZERO | STAT_C_CARRY,
         flags_set: STAT_V_OVERFLOW,
     });
 }
@@ -271,8 +271,65 @@ testcase(ADC_imm__V1_overflow) {
         instruction_size: 2,
         updates_a: true,
         a: (a + imm) % 0x100,
-        flags_ignore: (u8)~STAT_V_OVERFLOW,
+        flags_ignore: STAT_N_NEGATIVE | STAT_Z_ZERO | STAT_C_CARRY,
         flags_set: STAT_V_OVERFLOW,
+    });
+}
+
+testcase(AND_imm__Z0N0) {
+    u8 imm, a, r;
+    do {
+        imm  = rand_range(0x00, 0xFF);
+        a    = rand_range(0x00, 0xFF);
+        r    = a & imm;
+    } while (r == 0 || (r & 0x80) == 0x80);
+
+    set_mem(rom_mem, 2, 0x29, imm);
+    cpu.a = a;
+
+    return test_execution((ExpectedExecutionResult) {
+        num_cycles: 2,
+        instruction_size: 2,
+        updates_a: true,
+        a: r,
+        flags_unset: STAT_N_NEGATIVE | STAT_Z_ZERO,
+    });
+}
+
+testcase(AND_imm__Z0N1) {
+    u8 imm, a, r;
+    do {
+        imm  = rand_range(0x00, 0xFF);
+        a    = rand_range(0x00, 0xFF);
+        r    = a & imm;
+    } while (r == 0 || (r & 0x80) != 0x80);
+
+    set_mem(rom_mem, 2, 0x29, imm);
+    cpu.a = a;
+
+    return test_execution((ExpectedExecutionResult) {
+        num_cycles: 2,
+        instruction_size: 2,
+        updates_a: true,
+        a: r,
+        flags_set: STAT_N_NEGATIVE,
+        flags_unset: STAT_Z_ZERO,
+    });
+}
+
+testcase(AND_imm__Z1N0) {
+    u8 imm = rand_range(0x00, 0xFF);
+    u8 a   = (u8)~imm;
+    set_mem(rom_mem, 2, 0x29, imm);
+    cpu.a = a;
+
+    return test_execution((ExpectedExecutionResult) {
+        num_cycles: 2,
+        instruction_size: 2,
+        updates_a: true,
+        a: 0x00,
+        flags_set: STAT_Z_ZERO,
+        flags_unset: STAT_N_NEGATIVE,
     });
 }
 
@@ -940,9 +997,9 @@ void get_test_name(char *buff, void *test_func) {
     }
 
 header(__HEADER__ARITHMETIC__, "Arithmetic Instructions");
+header(__HEADER__LOGIC__,      "Logical Instructions");
 header(__HEADER__LOAD__,       "Load Instructions");
 header(__HEADER__TRANSFER__,   "Transfer Instructions");
-header(__HEADER__INCDEC__,     "Increment/Decrement Instructions");
 header(__HEADER__FLAG__,       "Flag Set/Clear Instructions");
 header(__HEADER__MISC__,       "Miscellaneous Instructions");
 
@@ -966,6 +1023,26 @@ int main(int argc, char *argv[]) {
         &ADC_imm__V0_overflow,
         &ADC_imm__V1_underflow,
         &ADC_imm__V1_overflow,
+        &INX_impl__N0Z0,
+        &INX_impl__N0Z0_boundary,
+        &INX_impl__N0Z1,
+        &INX_impl__N1Z0,
+        &INX_impl__N1Z0_boundary,
+        &DEX_impl__N0Z0,
+        &DEX_impl__N0Z0_boundary,
+        &DEX_impl__N0Z1,
+        &DEX_impl__N1Z0,
+        &DEX_impl__N1Z0_boundary,
+        &DEY_impl__N0Z0,
+        &DEY_impl__N0Z0_boundary,
+        &DEY_impl__N0Z1,
+        &DEY_impl__N1Z0,
+        &DEY_impl__N1Z0_boundary,
+
+        &__HEADER__LOGIC__,
+        &AND_imm__Z0N0,
+        &AND_imm__Z0N1,
+        &AND_imm__Z1N0,
 
         &__HEADER__LOAD__,
         &LDA_imm__N0Z0,
@@ -995,23 +1072,6 @@ int main(int argc, char *argv[]) {
         &TYA_imm__N0Z0,
         &TYA_imm__N0Z1,
         &TYA_imm__N1Z0,
-
-        &__HEADER__INCDEC__,
-        &INX_impl__N0Z0,
-        &INX_impl__N0Z0_boundary,
-        &INX_impl__N0Z1,
-        &INX_impl__N1Z0,
-        &INX_impl__N1Z0_boundary,
-        &DEX_impl__N0Z0,
-        &DEX_impl__N0Z0_boundary,
-        &DEX_impl__N0Z1,
-        &DEX_impl__N1Z0,
-        &DEX_impl__N1Z0_boundary,
-        &DEY_impl__N0Z0,
-        &DEY_impl__N0Z0_boundary,
-        &DEY_impl__N0Z1,
-        &DEY_impl__N1Z0,
-        &DEY_impl__N1Z0_boundary,
 
         &__HEADER__FLAG__,
         &CLC_impl,
