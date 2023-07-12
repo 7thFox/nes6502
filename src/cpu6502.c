@@ -220,7 +220,7 @@ void *_cpu_fetch_lo(Cpu6502 *c) {
                     }
                     u16 pc_before = c->pc;
                     if (branch) {
-                        c->pc += c->data_bus;
+                        c->pc += c->data_bus + 2;// Relative to next op-code => 0 = next address
                         if ((pc_before & 0xF0) != (c->pc & 0xF0)) {
                             return _cpu_page_boundary;
                         }
