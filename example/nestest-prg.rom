@@ -2065,5 +2065,5 @@ FE FE 06 0C 18 10 30 00 00 00 00 00 00 00 00 00 # $fc20
 00 00 00 00 00 00 00 00                         # $fff0
 00 00 # NMI vector   $0000
 AF C5 # RESET vector $c5af
-04 C0 # IRQ vector   $c004
+00 C0 # IRQ vector   $c004
 F4 C5 # BRK vector   $c5f4

@@ -45,6 +45,7 @@ void *_cpu_read_ind_read_val(Cpu6502 *c);
 void cpu_pulse(Cpu6502 *c) {
     tracef("cpu_pulse \n");
 
+    c->cyc++;
     c->tcu++;
     if ((c->bit_fields & PIN_READ) == PIN_READ) {
         c->data_bus = mem_read_addr(c->memmap, c->addr_bus);
@@ -60,8 +61,11 @@ void cpu_pulse(Cpu6502 *c) {
 
 void cpu_resb(Cpu6502 *c) {
     tracef("cpu_resb \n");
-    setflag(c->p, STAT___IGNORE | STAT_B_BREAK | STAT_I_INTERRUPT);
+    printf("P = %02X\n", c->p);
+    setflag(c->p, STAT___IGNORE | STAT_I_INTERRUPT);
     unsetflag(c->p, STAT_D_DECIMAL);
+
+    printf("P = %02X\n", c->p);
     // we skip the whole 2-cycle set pc part (for now anyway)
     // by hacky coincidence, not defining this sets it to $0000 which is how I set up the rom for testing
     u8 lo       = mem_read_addr(c->memmap, 0xfffc);
@@ -69,6 +73,7 @@ void cpu_resb(Cpu6502 *c) {
     c->pc       = (hi << 8) | lo;
     c->addr_bus = c->pc;
     c->tcu      = 0;
+    c->cyc      = 0;
     setflag(c->bit_fields, PIN_READ);
     c->on_next_clock = (void *(*)(void *))(_cpu_fetch_opcode);
     logf("Reset CPU. PC set to $%04x ($fffc: $%02x, $fffd: $%02x)\n", c->pc, lo, hi);

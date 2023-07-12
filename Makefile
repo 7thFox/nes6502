@@ -1,16 +1,23 @@
+# FLAGS = -rdynamic -Wall -Wunused-function -Wextra -Werror
+FLAGS = -rdynamic -Wall -Wunused-function -Wextra -Werror -finstrument-functions -finstrument-functions-exclude-file-list=src/profile.c,src/entrypoints/monitor.c
+
 monitor: bin
-	gcc -lncurses -rdynamic -Wall -Wextra -Werror src/*.c src/entrypoints/monitor.c -o bin/monitor
+	gcc -lncurses $(FLAGS) src/*.c src/entrypoints/monitor.c -o bin/monitor
 
 test: bin
-	gcc -rdynamic -Wall -Wunused-function -Wextra -Werror src/*.c src/entrypoints/test.c -o bin/test
+	gcc $(FLAGS) src/*.c src/entrypoints/test.c -o bin/test
 	bin/test
 
+nestest: bin
+	gcc $(FLAGS) src/*.c src/entrypoints/nestest.c -o bin/nestest
+	bin/nestest
+
 test1000: bin
-	gcc -rdynamic -Wall -Wunused-function -Wextra -Werror src/*.c src/entrypoints/test.c -o bin/test
+	gcc $(FLAGS) src/*.c src/entrypoints/test.c -o bin/test
 	bin/test -n 1000
 
 testerrors: bin
-	gcc -rdynamic -Wall -Wunused-function -Wextra -Werror src/*.c src/entrypoints/test.c -o bin/test
+	gcc $(FLAGS) src/*.c src/entrypoints/test.c -o bin/test
 	bin/test --errors-only
 
 run: monitor

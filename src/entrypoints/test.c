@@ -9,6 +9,7 @@
 #include "stdlib.h"
 #include "time.h"
 #include <stdarg.h>
+#include "../headers/profile.h"
 
 // Configured by flags:
 bool print_errors_only = false;
@@ -1099,6 +1100,7 @@ void setup_all_for_tests();
 void reset_for_test();
 
 int main(int argc, char *argv[]) {
+    init_profiler();
     enable_stacktrace();
     parse_args(argc, argv);
 
@@ -1313,6 +1315,8 @@ int main(int argc, char *argv[]) {
         printf(" %i ticks", total_runtime_clocks);
     }
     printf("\n");
+
+    end_profiler("profile.json");
 
     return all_success ? 0 : 1;
 }

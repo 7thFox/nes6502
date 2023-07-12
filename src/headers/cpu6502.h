@@ -40,6 +40,8 @@ typedef struct {
     u8  p;  // Status Flags
     u8  pd; // Input Data Latch
 
+    u64 cyc;
+
     u16 jsr_juggle_addr_because_im_lazy;
 
     u8 bit_fields;

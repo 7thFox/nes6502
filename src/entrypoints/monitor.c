@@ -9,10 +9,11 @@
 #include "signal.h"
 #include "stdio.h"
 #include "time.h"
+#include "../headers/profile.h"
 
 #define NES_MODE 1
 
-#define DEBUG_START 0x0000
+#define DEBUG_START 0 // normal resb logic
 // #define DEBUG_START 0xc013
 
 // const char *ROM_FILE = "./example/scratch.rom";
@@ -21,12 +22,16 @@ const char *ROM_FILE = "./example/nestest-prg.rom";
 
 void ncurses_cleanup() {
     endwin();
+
+    end_profiler("monitor.profile.json");
 }
 void run_monitor(Cpu6502 *cpu);
 
 int main() {
     if (!init_logging("monitor.log"))
         exit(EXIT_FAILURE);
+
+    init_profiler();
     tracef("main \n");
 
     enable_stacktrace();
@@ -78,6 +83,7 @@ int main() {
 
     signal(SIGINT, ncurses_cleanup);
     run_monitor(&cpu);
+    ncurses_cleanup();
 }
 
 void draw(Cpu6502 *cpu);
@@ -198,6 +204,8 @@ void run_monitor(Cpu6502 *cpu) {
                     return;
                 }
                 break;
+            case 'q':
+                return;
             default:
                 goto noredraw;
             }
@@ -441,7 +449,7 @@ void draw_cpu_registers(Cpu6502 *cpu) {
     mvwaddch(win_registers, X_LINE_INDEX + 1, COL_REG_WIDTH, ACS_RTEE);
 
     const int SP_LINE_INDEX = X_LINE_INDEX + 2;
-    sprintf(buff, "SP: $%02x   | PD: $%02x   |           |", cpu->sp, cpu->pd);
+    sprintf(buff, "SP: $%02x   | PD: $%02x   | CYC: %04li |", cpu->sp, cpu->pd, cpu->cyc);
     mvwaddstr(win_registers, SP_LINE_INDEX, 2, buff);
     mvwaddch(win_registers, SP_LINE_INDEX, COL_REG_WIDTH_1_3, ACS_VLINE);
     mvwaddch(win_registers, SP_LINE_INDEX, COL_REG_WIDTH_2_3, ACS_VLINE);
