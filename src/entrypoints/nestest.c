@@ -68,7 +68,7 @@ int main() {
 
     Cpu6502 cpu;
     cpu.p = 0;
-    cpu.sp = 0x0F;
+    cpu.sp = 0xFD;
     cpu.memmap   = &mem;
     cpu.addr_bus = rom.map_offset;
     cpu_resb(&cpu);
@@ -92,6 +92,8 @@ int main() {
     if (prev[81] != '\0' && prev[81] != '\r') {
         fatal("EOL not at expected position");
     }
+
+    u64 cyc_last = 0;
 
     while (fgets(buff, BUFFER_SIZE, expected))
     {
@@ -138,7 +140,7 @@ int main() {
 
         u64 cyc = dec(buff, 78, 3) / 3;// IDK why this is a multiple of 3, probably some dumb internal version of cycles
         if (cpu.cyc != cyc) {
-            test_fail("CYC Expected: %li Actual: %li", cyc, cpu.cyc);
+            test_fail("CYC Expected: %li(+%li) Actual: %li(+%li)", cyc, cyc - cyc_last, cpu.cyc, cpu.cyc - cyc_last);
         }
 
         u8 a = hex(buff, 50, 2);
@@ -161,7 +163,7 @@ int main() {
             test_fail("P Expected: %02X Actual: %02X", p, cpu.p);
         }
 
-        u8 sp = hex(buff, 70, 2);
+        u8 sp = hex(buff, 71, 2);
         if (cpu.sp != sp) {
             test_fail("SP Expected: %02X Actual: %02X", sp, cpu.sp);
         }
@@ -169,6 +171,7 @@ int main() {
         test_pass();
 
         memcpy(prev, buff, BUFFER_SIZE);
+        cyc_last = cyc;
     }
 
 
