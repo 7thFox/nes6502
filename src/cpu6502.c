@@ -88,8 +88,26 @@ void *_cpu_fetch_lo(Cpu6502 *c) {
     //                           c->ir, op_a, op_b, op_c,        lo,  lo);
 
     if (op_b == 1) { // zpg
-        c->addr_bus = c->data_bus;
-        return _cpu_read_addr;
+        if (op_a == 4) { // ST_ ops
+            c->addr_bus = c->data_bus & 0x00FF;
+            switch (c->ir) {
+                case 0x84: // STY
+                    c->data_bus = c->y;
+                    break;
+                case 0x85: // STA
+                    c->data_bus = c->a;
+                    break;
+                case 0x86: // STX
+                    c->data_bus = c->x;
+                    break;
+            }
+            unsetflag(c->bit_fields, PIN_READ);
+            return _cpu_write_zpg_fetch;
+        }
+        else {
+            c->addr_bus = c->data_bus  & 0x00FF;
+            return _cpu_read_addr;
+        }
     }
 
     switch (op_c) {
@@ -326,9 +344,11 @@ void *_cpu_fetch_lo(Cpu6502 *c) {
                         return _cpu_fetch_opcode;
                     }
                     break;
-                case 1: // zpg
-                    c->addr_bus = c->data_bus;
-                    return _cpu_read_zpg;
+                case 1: // STX zpg
+                    c->addr_bus = c->data_bus & 0x00FF;
+                    c->data_bus = c->x;
+                    unsetflag(c->bit_fields, PIN_READ);
+                    return _cpu_write_zpg_fetch;
                 case 2: // impl
                     switch (op_a) {
                         case 0: // ASL
@@ -468,7 +488,6 @@ void *_cpu_read_addr(Cpu6502 *c) {
                 switch (op_a) {
                     case 1: // BIT
                         u8 bits = STAT_N_NEGATIVE | STAT_V_OVERFLOW;
-                        printf("M: %02X P: %02X P|: %02X M|: %02X A: %02X A&M: %02X\n", c->data_bus, c->p, c->p & ~bits, c->data_bus & bits, c->a, c->data_bus & c->a);
                         c->p = (c->p & ~bits) | (c->data_bus & bits);
                         setunsetflag(c->p, STAT_Z_ZERO, ((c->data_bus & c->a) == 0));
                         break;
@@ -560,6 +579,7 @@ void *_cpu_read_addr(Cpu6502 *c) {
                 case 3: // ROR
                     break;
                 case 4: // STX
+                    c->data_bus = c->x;
                     break;
                 case 5: // LDX
                     c->x = c->data_bus;
@@ -764,7 +784,7 @@ void *_cpu_write_zpg_fetch(Cpu6502 *c) {
     c->pc += 2;
     c->tcu      = 0;
     c->addr_bus = c->pc;
-    unsetflag(c->bit_fields, PIN_READ);
+    setflag(c->bit_fields, PIN_READ);
     return _cpu_fetch_opcode;
 }
 
