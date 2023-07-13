@@ -18,7 +18,6 @@ void *_cpu_page_boundary(Cpu6502 *c);
 void *_cpu_read_addr_ind(Cpu6502 *c);
 void *_cpu_push(Cpu6502 *c);
 void *_cpu_pop(Cpu6502 *c);
-void *_cpu_page_boundray(Cpu6502 *c);
 void *_cpu_write_then_fetch_add3(Cpu6502 *c);
 void *_cpu_write_brk_write_pclo(Cpu6502 *c);
 void *_cpu_write_brk_write_sr(Cpu6502 *c);
@@ -37,11 +36,7 @@ void *_cpu_write_jsr_missing_extra_cycle(Cpu6502 *c);
 void *_cpu_write_jsr_fetch(Cpu6502 *c);
 void *_cpu_read_ind_read_addrhi(Cpu6502 *c);
 void *_cpu_read_ind_read_val(Cpu6502 *c);
-// void *_cpu_fetch(Cpu6502 *c);
-// void *_cpu_fetch(Cpu6502 *c);
-// void *_cpu_fetch(Cpu6502 *c);
-// void *_cpu_fetch(Cpu6502 *c);
-// void *_cpu_fetch(Cpu6502 *c);
+void *_cpu_rel_addr_inc(Cpu6502 *c);
 
 void cpu_pulse(Cpu6502 *c) {
     tracef("cpu_pulse \n");
@@ -62,11 +57,9 @@ void cpu_pulse(Cpu6502 *c) {
 
 void cpu_resb(Cpu6502 *c) {
     tracef("cpu_resb \n");
-    printf("P = %02X\n", c->p);
     setflag(c->p, STAT___IGNORE | STAT_I_INTERRUPT);
     unsetflag(c->p, STAT_D_DECIMAL);
 
-    printf("P = %02X\n", c->p);
     // we skip the whole 2-cycle set pc part (for now anyway)
     // by hacky coincidence, not defining this sets it to $0000 which is how I set up the rom for testing
     u8 lo       = mem_read_addr(c->memmap, 0xfffc);
@@ -218,15 +211,9 @@ void *_cpu_fetch_lo(Cpu6502 *c) {
                             branch = (c->p & STAT_Z_ZERO) == STAT_Z_ZERO;
                             break;
                     }
-                    u16 pc_before = c->pc;
+                    c->pc += 2; // next instruction
                     if (branch) {
-                        c->pc += c->data_bus + 2;// Relative to next op-code => 0 = next address
-                        if ((pc_before & 0xF0) != (c->pc & 0xF0)) {
-                            return _cpu_page_boundary;
-                        }
-                    }
-                    else {
-                        c->pc += 2; // next instruction
+                        return _cpu_rel_addr_inc;
                     }
                     c->addr_bus = c->pc;
                     c->tcu      = 0;
@@ -445,7 +432,7 @@ void *_cpu_fetch_hi(Cpu6502 *c) {
     }
 
     if ((addr_no_add & 0xFF00) != (c->addr_bus & 0xFF00)) {
-        return _cpu_page_boundray;
+        return _cpu_page_boundary;
     }
 
     if (op_a == 4) { // ST_
@@ -639,11 +626,6 @@ void *_cpu_pop(Cpu6502 *c) {
     return _cpu_fetch_opcode;
 }
 
-void *_cpu_page_boundray(Cpu6502 *c) {
-    c = c; // ignore warning
-    return _cpu_read_addr;
-}
-
 void *_cpu_write_then_fetch_add3(Cpu6502 *c) {
     c->pc += 3;
     c->tcu      = 0;
@@ -828,4 +810,16 @@ void *_cpu_read_ind_read_val(Cpu6502 *c) {
         }
     }
     return _cpu_read_addr;
+}
+
+
+void *_cpu_rel_addr_inc(Cpu6502 *c) {
+    u16 pc_before = c->pc;
+    c->pc += c->data_bus;
+
+    if ((pc_before & 0xFF00) != (c->pc & 0xFF00)) {
+        return _cpu_page_boundary;
+    }
+
+    return _cpu_page_boundary(c);
 }
