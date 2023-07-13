@@ -83,19 +83,19 @@ int main() {
     // }
 
 #define BUFFER_SIZE 128
-    char prev[BUFFER_SIZE];
-    char buff[BUFFER_SIZE];
+    char to_execute[BUFFER_SIZE];
+    char result[BUFFER_SIZE];
     int fails = 0;
     init_profiler();
 
-    fgets(prev, BUFFER_SIZE, expected);
-    if (prev[81] != '\0' && prev[81] != '\r') {
+    fgets(to_execute, BUFFER_SIZE, expected);
+    if (to_execute[81] != '\0' && to_execute[81] != '\r') {
         fatal("EOL not at expected position");
     }
 
     u64 cyc_last = 0;
 
-    while (fgets(buff, BUFFER_SIZE, expected))
+    while (fgets(result, BUFFER_SIZE, expected))
     {
         clock_t start = clock();
 
@@ -105,7 +105,7 @@ int main() {
     printf(                             \
         "\033[31m"                      \
         "[Failed] %.*s in %lims\n"         \
-        "    ", 28, prev, elapsed / CLOCKS_PER_MS); \
+        "    ", 28, to_execute, elapsed / CLOCKS_PER_MS); \
     printf(msg, __VA_ARGS__); \
     printf("\033[0;39m\n"); \
     if (++fails >= STOP_AFTER) break; \
@@ -117,19 +117,20 @@ int main() {
     printf(                             \
         "\033[32m"                      \
         "[Passed] %.*s in %lims"    \
-        "\033[0;39m\n", 28, prev, elapsed / CLOCKS_PER_MS); \
+        "\033[0;39m\n", 28, to_execute, elapsed / CLOCKS_PER_MS); \
     fails = 0; \
 }
 
         // 0         1         2         3         4         5         6         7         8
         // 012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
         // C736  18        CLC                             A:00 X:00 Y:00 P:27 SP:FB CYC: 87
+        // C780  85 01     STA $01 = 00                    A:FF X:00 Y:00 P:A4 SP:FB CYC:264
 
-        if (buff[81] != '\0' && buff[81] != '\r') {
+        if (result[81] != '\0' && result[81] != '\r') {
             fatal("EOL not at expected position");
         }
 
-        u16 pc = hex(prev, 0, 4);
+        u16 pc = hex(to_execute, 0, 4);
         if (cpu.pc != pc) {
             test_fail("PC Expected: %04X Actual: %04X", pc, cpu.pc);
         }
@@ -138,39 +139,56 @@ int main() {
             cpu_pulse(&cpu);
         } while (cpu.tcu != 0);
 
-        u64 cyc = dec(buff, 78, 3) / 3;// IDK why this is a multiple of 3, probably some dumb internal version of cycles
+        u64 cyc = dec(result, 78, 3) / 3;// IDK why this is a multiple of 3, probably some dumb internal version of cycles
         if (cpu.cyc != cyc) {
             test_fail("CYC Expected: %li(+%li) Actual: %li(+%li)", cyc, cyc - cyc_last, cpu.cyc, cpu.cyc - cyc_last);
         }
 
-        u8 a = hex(buff, 50, 2);
+        if (to_execute[20] == '$' && to_execute[24] == '=') {
+            u8 zpg_addr = hex(to_execute, 21, 2);
+            u8 val = hex(to_execute, 26, 2);
+            u8 actual = mem_read_addr(&mem, zpg_addr);
+            if (actual != val) {
+                test_fail("zpg $%02X Expected: %02X Actual: %02X", zpg_addr, val, actual);
+            }
+        }
+        else if (to_execute[20] == '$' && to_execute[26] == '=') {
+            u16 abs_addr = hex(to_execute, 21, 4);
+            u8 val = hex(to_execute, 28, 2);
+            u8 actual = mem_read_addr(&mem, abs_addr);
+            if (actual != val) {
+                test_fail("abs $%04X Expected: %02X Actual: %02X", abs_addr, val, actual);
+            }
+        }
+
+        u8 a = hex(result, 50, 2);
         if (cpu.a != a) {
             test_fail("A Expected: %02X Actual: %02X", a, cpu.a);
         }
 
-        u8 x = hex(buff, 55, 2);
+        u8 x = hex(result, 55, 2);
         if (cpu.x != x) {
             test_fail("X Expected: %02X Actual: %02X", x, cpu.x);
         }
 
-        u8 y = hex(buff, 60, 2);
+        u8 y = hex(result, 60, 2);
         if (cpu.y != y) {
             test_fail("Y Expected: %02X Actual: %02X", y, cpu.y);
         }
 
-        u8 p = hex(buff, 65, 2);
+        u8 p = hex(result, 65, 2);
         if (cpu.p != p) {
             test_fail("P Expected: %02X Actual: %02X", p, cpu.p);
         }
 
-        u8 sp = hex(buff, 71, 2);
+        u8 sp = hex(result, 71, 2);
         if (cpu.sp != sp) {
             test_fail("SP Expected: %02X Actual: %02X", sp, cpu.sp);
         }
 
         test_pass();
 
-        memcpy(prev, buff, BUFFER_SIZE);
+        memcpy(to_execute, result, BUFFER_SIZE);
         cyc_last = cyc;
     }
 
