@@ -13,8 +13,8 @@
 
 #define NES_MODE 1
 
-// #define DEBUG_START 0 // normal resb logic
-#define DEBUG_START 0xCEEE
+#define DEBUG_START 0 // normal resb logic
+// #define DEBUG_START 0xCEEE
 
 // const char *ROM_FILE = "./example/scratch.rom";
 // const char *ROM_FILE = "./example/klaus2m5_functional_test.rom";
@@ -164,7 +164,7 @@ void run_monitor(Cpu6502 *cpu) {
     noredraw:
 
         if (run_until_addr) {
-            if (addr_to_stop == cpu->pc) {
+            if (addr_to_stop == cpu->pc && cpu->tcu == 0) {
                 run_until_addr = false;
                 timeout(-1);
                 goto noredraw;
