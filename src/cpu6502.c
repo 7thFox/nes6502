@@ -375,7 +375,9 @@ void *_cpu_fetch_lo(Cpu6502 *c) {
                             c->a = (c->a << 1) | (c->a >> 7);
                             break;
                         case 2: // LSR
+                            setunsetflag(c->p, STAT_C_CARRY, c->a & 0x01);
                             c->a >>= 1;
+                            _cpu_update_NZ_flags(c, c->a);
                             break;
                         case 3: // ROR
                             c->a = (c->a >> 1) | (c->a << 7);
