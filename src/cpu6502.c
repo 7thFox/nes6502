@@ -304,7 +304,7 @@ void *_cpu_fetch_lo(Cpu6502 *c) {
                             c->a ^= c->data_bus;
                             break;
                         case 7: // SBC
-                            c->a = ~(c->a);
+                            c->data_bus = ~c->data_bus;
                             // FALLTHROUGH!!!
                         case 3: // ADC
                         {
