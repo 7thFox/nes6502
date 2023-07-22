@@ -13,8 +13,8 @@
 
 #define NES_MODE 1
 
-#define DEBUG_START 0 // normal resb logic
-// #define DEBUG_START 0xc013
+// #define DEBUG_START 0 // normal resb logic
+#define DEBUG_START 0xCFA2
 
 // const char *ROM_FILE = "./example/scratch.rom";
 // const char *ROM_FILE = "./example/klaus2m5_functional_test.rom";
@@ -79,6 +79,7 @@ int main() {
 
     if (DEBUG_START) {
         cpu.pc = DEBUG_START;
+        cpu.addr_bus = DEBUG_START;
     }
 
     signal(SIGINT, ncurses_cleanup);

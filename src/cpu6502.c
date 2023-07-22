@@ -11,6 +11,8 @@ void compare(Cpu6502 *c, u8 reg) {
 }
 
 void *_cpu_fetch_opcode(Cpu6502 *c);
+void *_cpu_fetch_opcode_add1(Cpu6502 *c);
+void *_cpu_fetch_opcode_add2(Cpu6502 *c);
 void *_cpu_fetch_lo(Cpu6502 *c);
 void *_cpu_fetch_hi(Cpu6502 *c);
 void *_cpu_read_addr(Cpu6502 *c);
@@ -79,6 +81,14 @@ void *_cpu_fetch_opcode(Cpu6502 *c) {
     return _cpu_fetch_lo;
 }
 
+void *_cpu_fetch_opcode_add1(Cpu6502 *c) {
+    c->addr_bus = c->pc;
+    c->tcu      = 0;
+    setflag(c->bit_fields, PIN_READ);
+    return _cpu_fetch_opcode;
+}
+void *_cpu_fetch_opcode_add2(Cpu6502 *c __attribute__((unused))) { return _cpu_fetch_opcode_add1; }
+
 void *_cpu_fetch_lo(Cpu6502 *c) {
     int op_a = (c->ir & 0b11100000) >> 5;
     int op_b = (c->ir & 0b00011100) >> 2;
@@ -134,7 +144,6 @@ void *_cpu_fetch_lo(Cpu6502 *c) {
                             c->sp++;
                             c->addr_bus = 0x0100 | c->sp;
                             return _cpu_read_rts_read_pchi;
-                            break;
                         case 5: // LDY
                             c->y = c->data_bus;
                             _cpu_update_NZ_flags(c, c->y);
@@ -717,9 +726,7 @@ void *_cpu_read_rts_read_pchi(Cpu6502 *c) {
 void *_cpu_read_rts_fetch(Cpu6502 *c) {
     c->pc = (c->data_bus << 8) | c->pd;
     c->pc++; // RTS adds 1 to the pushed pc
-    c->addr_bus = c->pc;
-    c->tcu      = 0;
-    return _cpu_fetch_opcode;
+    return _cpu_fetch_opcode_add2;
 }
 
 void *_cpu_read_zpg(Cpu6502 *c) {

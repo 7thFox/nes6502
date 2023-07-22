@@ -830,8 +830,21 @@ EA 20 23 FB AD 47 06 C9 52 F0 02 84 00 C8 A9 29 # $b390
 AD 47 06 C9 14 F0 02 84 00 C8 A9 37 8D 47 06 20 # $b3b0
 40 FB 4F 47 06 EA EA EA EA 20 46 FB AD 47 06 C9 # $b3c0
 1B F0 02 84 00 A9 A5 8D 47 06 A9 48 85 45 A9 05 # $b3d0
-85 46 A0 FF 20 1D FB 53 45 EA EA 08 48 A0 F2 68 # $b3e0
-28 20 23 FB AD 47 06 C9 52 F0 02 84 00 A0 FF A9 # $b3f0
+85 46 A0 FF 20 1D FB 53 45 EA EA 08 48
+
+A0 F2    # LDY #$F2
+68       # PLA
+28       # PLP
+20 23 FB # JSR $FB23
+
+# if flags set returns after setting LDA = B3
+
+AD 47 06    # LDA $0647
+C9 52       # CMP #$52
+F0 02       # BEQ $02
+84 00       # STY $00
+
+A0 FF A9 # $b3f0
 29 8D 47 06 20 2E FB 53 45 EA EA 08 48 A0 F3 68 # $b400
 28 20 33 FB AD 47 06 C9 14 F0 02 84 00 A0 FF A9 # $b410
 37 8D 47 06 20 40 FB 53 45 EA EA 08 48 A0 F4 68 # $b420
@@ -1025,9 +1038,12 @@ FE FE 06 0C 18 10 30 00 00 00 00 00 00 00 00 00 # $bc20
 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 # $bfd0
 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 # $bfe0
 00 00 00 00 00 00 00 00 00 00 AF C5 04 C0 F4 C5 # $bff0
-4C F5 C5 60                                     # $c000
+# $c000
 
-# $c004: RESET
+4C F5 C5 # JMP $C5F5
+
+
+60       # RTS
 78       # SEI
 D8       # CLD
 A2 FF    # LDA $ff
@@ -1130,16 +1146,47 @@ FF 20 20 20 20 2D 2D 20 52 52 41 20 74 65 73 74 # $c550
 D2 A9 00 8D 05 20 8D 05 20 A9 00 8D 06 20 A9 00 # $c5c0
 8D 06 20 A2 09 8E 16 40 CA 8E 16 40 AD 16 40 4A # $c5d0
 26 D4 CA D0 F7 A5 D4 AA 45 D6 25 D4 85 D5 86 D6 # $c5e0
-68 AA 68 40                                     # $c5f0
+68 AA 68 40 40                                  # $c5f0
 
-# $c5f4: BRK
-40 A2 00 86 00 86 10 86 11 20 2D C7
+# c5f5:
+A2 00    # LDX #$00
+86 00    # STX $00
+86 10    # STX $10
+86 11    # STX $11
 
-20 DB C7 20 85 C8 20 DE CB 20 F8 CD 20 EE CE 20 # $c600
-A2 CF 20 74 D1 20 FB D4 20 00 D9 A5 00 85 10 A9 # $c610
-00 85 00 20 E0 DA 20 4A DF 20 B8 DB 20 AA E1 20 # $c620
-A3 C6 20 1E E5 20 3D E7 20 D3 E8 20 16 E9 20 86 # $c630
-EB 20 F6 ED 20 66 F0 20 D6 F2 A5 00 85 11 A9 00 # $c640
+20 2D C7 # JSR $C72D -- branch tests                (01-10)
+20 DB C7 # JSR $C7DB -- flag tests                  (11-17)
+20 85 C8 # JSR $C885 -- immediate instruction tests (18-3D)
+         #                                          (71-75)
+20 DE CB # JSR $CBDE -- implied instruction tests   (3E-45)
+20 F8 CD # JSR $CDF8 -- stack tests                 (46-47)
+20 EE CE # JSR $CEEE -- accumulator tests           (4A-4D)
+20 A2 CF # JSR $CFA2 -- (indirect,x) tests          (58-70)
+20 74 D1 # JSR $D174 -- zeropage tests              (76-AF)
+20 FB D4 # JSR $D4FB -- Absolute tests              (B0-E9)
+20 00 D9 # JSR $D900 -- (indirect),y tests          (EA-FE)     [01-07]
+         #                                     Gap: (FF)
+
+A5 00 # LDA $00
+85 10 # STA $10
+A9 00 # LDA #$00
+85 00 # STA $00
+
+20 E0 DA # JSR $DAE0 -- zeropage,x tests                        [08-35]
+20 4A DF # JSR $DF4A -- absolute,y tests                        [36-50]
+20 B8 DB # JSR $DBB8 -- absolute,x tests                        [51-7B]
+20 AA E1 # JSR $E1AA -- NOP - "invalid" opcode tests (4E-57)
+20 A3 C6 # JSR $C6A3 -- LAX - "invalid" opcode tests            [7C-87]
+20 1E E5 # JSR $E51E -- SAX - "invalid" opcode tests            [88-8F]
+20 3D E7 # JSR $E73D -- SBC - "invalid" opcode test             [90-94]
+20 D3 E8 # JSR $E8D3 -- DCP - "invalid" opcode tests            [95-A9]
+20 16 E9 # JSR $E916 -- ISB - "invalid" opcode tests            [AA-BE]
+20 86 EB # JSR $EB86 -- SLO - "invalid" opcode tests            [BF-D3]
+20 F6 ED # JSR $EDF6 -- RLA - "invalid" opcode tests            [D4-E8]
+20 66 F0 # JSR $F066 -- SRE - "invalid" opcode tests            [E8-FD] !overlap
+20 D6 F2 # JSR $F2D6 -- RRA - "invalid" opcode tests            [01-15]
+
+A5 00 85 11 A9 00 # $c640
 85 00 20 46 F5 A5 00 05 10 05 11 F0 0E 20 6F C6 # $c650
 A6 00 86 02 A6 10 86 03 4C 6E C6 20 89 C6 60 A9 # $c660
 03 8D 15 40 A9 87 8D 00 40 A9 89 8D 01 40 A9 F0 # $c670
@@ -1153,8 +1200,21 @@ EA EA 08 48 1A 3A 5A 7A DA FA 80 89 EA EA EA EA # $c6e0
 08 48 1C A9 A9 3C A9 A9 5C A9 A9 7C A9 A9 DC A9 # $c6f0
 A9 FC A9 A9 EA EA EA EA 08 48 A2 05 68 C9 55 F0 # $c700
 0A C9 AA F0 06 68 84 00 4C 28 C7 68 29 CB C9 00 # $c710
-F0 06 C9 CB F0 02 84 00 C8 CA D0 E0 60 EA 38 B0 # $c720
-04 A2 01 86 00 EA 18 B0 03 4C 40 C7 A2 02 86 00 # $c730
+F0 06 C9 CB F0 02 84 00 C8 CA D0 E0 60          # $c720
+
+# C72D:
+EA       # NOP
+38       # SEC
+B0 04    # BCS $04 should branch to NOP below
+A2 01    # LDX #$01
+86 00    # STX $00 = 01
+EA       # NOP
+18       # CLC
+B0 03    # BCS $04 should not branch
+4C 40 C7 # JMP $C740
+A2 02    # LDX $02
+86 00    # STX $00
+# C740:
 EA 38 90 03 4C 4B C7 A2 03 86 00 EA 18 90 04 A2 # $c740
 04 86 00 EA A9 00 F0 04 A2 05 86 00 EA A9 40 F0 # $c750
 03 4C 68 C7 A2 06 86 00 EA A9 40 D0 04 A2 07 86 # $c760
@@ -1288,8 +1348,13 @@ C9 AA D0 03 4C 4B CF A2 4B 86 00 EA 24 01 38 A9 # $cf40
 A9 55 6A 90 0D F0 0B 30 09 70 07 C9 2A D0 03 4C # $cf60
 76 CF A2 4C 86 00 EA 24 01 38 A9 80 2A 90 1E F0 # $cf70
 1C 30 1A 50 18 C9 01 D0 14 B8 18 A9 55 2A B0 0D # $cf80
-F0 0B 10 09 70 07 C9 AA D0 03 4C A1 CF A2 4D 86 # $cf90
-00 60 A5 00 8D FF 07 A9 00 85 80 A9 02 85 81 A9 # $cfa0
+F0 0B 10 09 70 07 C9 AA D0 03 4C A1 CF
+
+# CF9D
+A2 4D    # LDX 4D
+86 00    # STX $00
+60       # RTS
+   A5 00 8D FF 07 A9 00 85 80 A9 02 85 81 A9 # $cfa0
 FF 85 01 A9 00 85 82 A9 03 85 83 85 84 A9 00 85 # $cfb0
 FF A9 04 85 00 A9 5A 8D 00 02 A9 5B 8D 00 03 A9 # $cfc0
 5C 8D 03 03 A9 5D 8D 00 04 A2 00 A1 80 C9 5A D0 # $cfd0
@@ -1985,15 +2050,32 @@ FF D0 13 60 24 01 38 A9 F0 60 70 0A F0 08 10 06 # $fad0
 2A 90 28 30 26 C9 05 D0 22 60 B8 18 A9 42 60 70 # $faf0
 1A 30 18 B0 16 C9 57 D0 12 60 24 01 38 A9 75 60 # $fb00
 70 09 30 07 90 05 C9 11 D0 01 60 85 00 24 01 18 # $fb10
-A9 B3 60 50 50 90 4E 10 4C C9 E1 D0 48 60 B8 18 # $fb20
+A9 B3 60
+
+
+50 50    # BVC $50 ($FB55)          FB23
+90 4E    # BCC $4E ($FB55)          FB25
+10 4C    # BPL $4C ($FB55)          FB27
+C9 E1    # CMP #$E1                 FB29
+D0 48    # BNE $80 ($FBAD)          FB2B
+60       # RTS                      FB2D
+
+
+B8 18 # $FB2E
 A9 42 60 70 40 F0 3E 30 3C 90 3A C9 56 D0 36 60 # $fb30
 24 01 38 A9 75 60 50 2D F0 2B 30 29 90 27 C9 6E # $fb40
-D0 23 60 24 01 18 A9 B3 60 50 1A 90 18 30 16 C9 # $fb50
+D0 23 60 24 01
+
+# FB55
+18 A9 B3 60 50 1A 90 18 30 16 C9 # $fb50
 02 D0 12 60 B8 18 A9 42 60 70 0A F0 08 30 06 B0 # $fb60
 04 C9 42 F0 02 84 00 60 00 00 00 00 00 00 00 00 # $fb70
 00 00 00 00 00 00 00 00 80 80 FF 80 80 00 00 00 # $fb80
 00 00 FF 00 00 00 00 00 01 01 FF 01 01 00 00 00 # $fb90
-00 00 00 00 00 00 00 00 7C FE 00 C0 C0 FE 7C 00 # $fba0
+00 00 00 00 00 00 00 00 7C FE 00 C0 C0
+
+# FBAD
+FE 7C 00 # $fba0
 FE FE 00 F0 C0 FE FE 00 C6 C6 02 FE C6 C6 C6 00 # $fbb0
 CC D8 00 F0 D8 CC C6 00 C6 EE 02 D6 C6 C6 C6 00 # $fbc0
 C6 C6 02 D6 CE C6 C6 00 7C FE 02 C6 C6 FE 7C 00 # $fbd0
