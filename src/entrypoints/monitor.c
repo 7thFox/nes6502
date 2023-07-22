@@ -14,7 +14,7 @@
 #define NES_MODE 1
 
 // #define DEBUG_START 0 // normal resb logic
-#define DEBUG_START 0xC61B
+#define DEBUG_START 0xC849
 
 // const char *ROM_FILE = "./example/scratch.rom";
 // const char *ROM_FILE = "./example/klaus2m5_functional_test.rom";

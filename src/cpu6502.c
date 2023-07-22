@@ -524,7 +524,6 @@ void *_cpu_read_addr(Cpu6502 *c) {
                 case 0x28: // PLP
                 case 0x68: // PLA
                     c->pd = c->data_bus;
-                    // c->sp++;
                     return _cpu_pop;
                 case 0x6C: // JMP ind
                     c->addr_bus++;
@@ -654,6 +653,12 @@ void *_cpu_pop(Cpu6502 *c) {
             u8 keep = c->p & (STAT_B_BREAK | STAT___IGNORE);
             c->p = c->pd & ~STAT___IGNORE & ~STAT___IGNORE;
             c->p |= keep;
+            break;
+        }
+        case 0x68: // PLA
+        {
+            c->a = c->pd;
+            _cpu_update_NZ_flags(c, c->a);
             break;
         }
     }
