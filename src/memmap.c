@@ -93,5 +93,9 @@ void mem_write_addr(MemoryMap *m, memaddr addr, u8 value) {
     }
 
     MemoryBlock *b = mem_get_write_block(m, addr);
-    if (b) b->values[addr - b->range_low] = value;
+    if (b) {
+        tracef("[%04X] = %02X\n", addr - b->range_low, value);
+        b->values[addr - b->range_low] = value;
+        tracef("[%04X] = %02X\n", addr - b->range_low, b->values[addr - b->range_low]);
+    }
 }

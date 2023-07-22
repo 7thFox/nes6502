@@ -174,6 +174,7 @@ void *_cpu_fetch_lo(Cpu6502 *c) {
                             unsetflag(c->bit_fields, PIN_READ);
                             return _cpu_push;
                         case 1: // PLP
+                            c->sp++;
                             c->addr_bus = c->sp;
                             return _cpu_read_addr;
                         case 2: // PHA
@@ -182,6 +183,7 @@ void *_cpu_fetch_lo(Cpu6502 *c) {
                             unsetflag(c->bit_fields, PIN_READ);
                             return _cpu_push;
                         case 3: // PLA
+                            c->sp++;
                             c->addr_bus = c->sp;
                             return _cpu_read_addr;
                         case 4: // DEY
@@ -520,7 +522,7 @@ void *_cpu_read_addr(Cpu6502 *c) {
                 case 0x28: // PLP
                 case 0x68: // PLA
                     c->pd = c->data_bus;
-                    c->sp++;
+                    // c->sp++;
                     return _cpu_pop;
                 case 0x6C: // JMP ind
                     c->addr_bus++;
@@ -646,9 +648,12 @@ void *_cpu_push(Cpu6502 *c) {
 void *_cpu_pop(Cpu6502 *c) {
     switch (c->ir) {
         case 0x28: // PLP
-            c->p = c->pd;
-            unsetflag(c->p, STAT_B_BREAK);
-            unsetflag(c->p, STAT___IGNORE);
+            printf("%02X => [%02X]", c->pd, c->p);
+            u8 keep = c->p & (STAT_B_BREAK | STAT___IGNORE);
+            c->p = c->pd & ~STAT___IGNORE & ~STAT___IGNORE;
+            c->p |= keep;
+
+            printf(" = %02X\n", c->p);
             break;
     }
     c->pc++;

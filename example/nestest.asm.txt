@@ -1099,16 +1099,20 @@ begin_tests:
     $C81D: a2 13     LDX #$13 (19)
     $C81F: 86 00     STX $00 (0)
     $C821: ea        NOP
+test_1_14:
     $C822: a9 ff     LDA #$ff (255)
     $C824: 48        PHA
     $C825: 28        PLP
-    $C826: d0 09     BNE $09 (9)
-    $C828: 10 07     BPL $07 (7)
-    $C82A: 50 05     BVC $05 (5)
-    $C82C: 90 03     BCC $03 (3)
-    $C82E: 4c 35 c8  JMP $c835 (51253)
+    $C826: d0 09     BNE error_1_14 $09 (9)
+    $C828: 10 07     BPL error_1_14 $07 (7)
+    $C82A: 50 05     BVC error_1_14 $05 (5)
+    $C82C: 90 03     BCC error_1_14 $03 (3)
+    $C82E: 4c 35 c8  JMP test_1_15 $c835 (51253)
+
+error_1_14:
     $C831: a2 14     LDX #$14 (20)
     $C833: 86 00     STX $00 (0)
+test_1_15:
     $C835: ea        NOP
     $C836: a9 04     LDA #$04 (4)
     $C838: 48        PHA
