@@ -16,7 +16,8 @@ typedef struct {
 } Disassembler;
 
 typedef struct {
-    int count;
+    int countInst;
+    int countBytes;
     char (*text)[N_MAX_TEXT_SIZE];
     char (*bytes)[N_MAX_BYTE_SIZE];
     u8 *offsets;

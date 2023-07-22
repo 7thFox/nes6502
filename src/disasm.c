@@ -146,7 +146,7 @@ Disassembly disasm(Disassembler *d, u8 *data_aligned, size_t data_size, int n) {
         iInst++;
         iData += size;
     }
-    return (Disassembly) {iInst, d->_disasm_text, d->_disasm_bytes, d->_disasm_offsets};
+    return (Disassembly) {iInst, iData, d->_disasm_text, d->_disasm_bytes, d->_disasm_offsets};
     // return (Disassembly){n, d->_disasm_text, d->_disasm_bytes};
 }
 

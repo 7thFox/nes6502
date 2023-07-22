@@ -366,7 +366,7 @@ void draw_instructions(MemoryBlock *b, memaddr pc) {
 
         u16         offset = alignment_addr - b->range_low;
         Disassembly dis    = disasm(disassembler, b->values + offset, b->range_high - alignment_addr, WIN_INST_LINES);
-        for (int i = 0; i < dis.count; i++) {
+        for (int i = 0; i < dis.countInst; i++) {
             wattron(win_instructions, COLOR_PAIR(COLOR_ADDRESS_LABEL));
             u16 addr = dis.offsets[i] + alignment_addr;
             sprintf(addr_buff, "$%04x: ", addr);

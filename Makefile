@@ -12,6 +12,10 @@ nestest: bin
 	gcc $(FLAGS) src/*.c src/entrypoints/nestest.c -o bin/nestest
 	bin/nestest
 
+dis: bin
+	gcc $(FLAGS) src/*.c src/entrypoints/disassembler.c -o bin/dis
+	bin/dis
+
 test1000: bin
 	gcc $(FLAGS) src/*.c src/entrypoints/test.c -o bin/test
 	bin/test -n 1000
