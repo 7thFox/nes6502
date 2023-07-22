@@ -322,7 +322,11 @@ void *_cpu_fetch_lo(Cpu6502 *c) {
                             break;
                         case 6: // CMP
                             compare(c, c->a);
-                            break;
+                            // need to skip setNZ below
+                            c->tcu = 0;
+                            c->pc += 2;
+                            c->addr_bus = c->pc;
+                            return _cpu_fetch_opcode;
                     }
                     _cpu_update_NZ_flags(c, c->a);
                     c->tcu = 0;
