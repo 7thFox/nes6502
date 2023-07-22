@@ -169,22 +169,22 @@ void *_cpu_fetch_lo(Cpu6502 *c) {
                 case 2: // impl
                     switch (op_a) {
                         case 0: // PHP
-                            c->addr_bus = c->sp;
+                            c->addr_bus = c->sp + 0x100;
                             c->data_bus = c->p | STAT_B_BREAK | STAT___IGNORE;
                             unsetflag(c->bit_fields, PIN_READ);
                             return _cpu_push;
                         case 1: // PLP
                             c->sp++;
-                            c->addr_bus = c->sp;
+                            c->addr_bus = c->sp + 0x100;
                             return _cpu_read_addr;
                         case 2: // PHA
-                            c->addr_bus = c->sp;
+                            c->addr_bus = c->sp + 0x100;
                             c->data_bus = c->a;
                             unsetflag(c->bit_fields, PIN_READ);
                             return _cpu_push;
                         case 3: // PLA
                             c->sp++;
-                            c->addr_bus = c->sp;
+                            c->addr_bus = c->sp + 0x100;
                             return _cpu_read_addr;
                         case 4: // DEY
                             c->y--;
@@ -408,7 +408,7 @@ void *_cpu_fetch_lo(Cpu6502 *c) {
                             c->sp = c->x;
                             break;
                         case 5: // TSX
-                            c->x = c->sp;
+                            c->x = c->sp + 0x100;
                             _cpu_update_NZ_flags(c, c->x);
                             break;
                     }
