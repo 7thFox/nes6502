@@ -577,6 +577,8 @@ struct test_t tests_group3[] = {
     {0x15, "RRA abs,x failure"},
 };
 
+#define ADDR_ERR_CODE 0x00
+
 int main() {
     if (!init_logging("monitor.log"))
         exit(EXIT_FAILURE);
@@ -638,8 +640,6 @@ int main() {
 
     */
 
-#define ADDR_ERR_CODE 0x00
-
     // init test (wait for error code to get 0'd)
     do {
         cpu_pulse(&cpu);
@@ -647,6 +647,7 @@ int main() {
 
     u16 pc_last = 0xFFFF;
     u8 status_prev = 0;
+    int group = 1;
     while (cpu.pc != pc_last || cpu.tcu != 0) {
         if (cpu.tcu == 0) {
             pc_last = cpu.pc;
@@ -656,31 +657,29 @@ int main() {
         u8 status = mem_read_addr(&mem, ADDR_ERR_CODE);
 
         if (status != status_prev && status != 0) {
-            int group;
             const char *msg = "Unknown";
-            if (cpu.pc < GROUP2_ADDR_START) {
-                group = 1;
-                for (unsigned int i = 0; i < GROUP1_LEN; i++) {
-                    if (tests_group1[i].err_code == status) {
-                        msg = tests_group1[i].msg;
-                        break;
-                    }
-                }
+
+            struct test_t *group_arr;
+            size_t group_size;
+            switch (group) {
+                case 1:
+                    group_arr = tests_group1;
+                    group_size = GROUP1_LEN;
+                    break;
+                case 2:
+                    group_arr = tests_group2;
+                    group_size = GROUP2_LEN;
+                    break;
+                case 3:
+                    group_arr = tests_group3;
+                    group_size = GROUP3_LEN;
+                    break;
             }
-            else if (cpu.pc < GROUP3_ADDR_START) {
-                group = 2;
-                for (unsigned int i = 0; i < GROUP2_LEN; i++) {
-                    if (tests_group2[i].err_code == status) {
-                        msg = tests_group2[i].msg;
-                        break;
-                    }
-                }
-            }
-            else {
-                group = 3;
-                for (unsigned int i = 0; i < GROUP3_LEN; i++) {
-                    if (tests_group3[i].err_code == status) {
-                        msg = tests_group3[i].msg;
+
+            if (group_arr) {
+                for (unsigned int i = 0; i < group_size; i++) {
+                    if (group_arr[i].err_code == status) {
+                        msg = group_arr[i].msg;
                         break;
                     }
                 }
@@ -690,6 +689,16 @@ int main() {
                 "[Failed] Test %02X (G%i) @ $%04X: %s"
                 "\033[0;39m\n", status, group, cpu.pc, msg);
         }
+
+        switch (cpu.pc) {
+            case 0xC623:
+                group = 2;
+                break;
+            case 0xC652:
+                group = 3;
+                break;
+        }
+
         status_prev = status;
     }
 

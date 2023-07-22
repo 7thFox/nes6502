@@ -14,7 +14,7 @@
 #define NES_MODE 1
 
 // #define DEBUG_START 0 // normal resb logic
-#define DEBUG_START 0xC821
+#define DEBUG_START 0xC61B
 
 // const char *ROM_FILE = "./example/scratch.rom";
 // const char *ROM_FILE = "./example/klaus2m5_functional_test.rom";
@@ -317,7 +317,7 @@ void draw_mem_block(WINDOW *win, int num_lines, MemoryBlock *b, memaddr addr, bo
 
         for (int l = 0; l < num_lines; l++) {
             wattron(win, COLOR_PAIR(COLOR_ADDRESS_LABEL));
-            sprintf(fmt, "$%04X: ", addr_start + (l * WIN_MEM_BYTES_PER_LINE));
+            sprintf(fmt, "$%04X: ", (addr_start + (l * WIN_MEM_BYTES_PER_LINE)) % 0x10000);
             mvwaddstr(win, l + 1, 2, fmt);
             wattroff(win, COLOR_PAIR(COLOR_ADDRESS_LABEL));
 

@@ -498,10 +498,12 @@ void *_cpu_read_addr(Cpu6502 *c) {
             if (op_b == 1 || op_b == 3) {
                 switch (op_a) {
                     case 1: // BIT
+                    {
                         u8 bits = STAT_N_NEGATIVE | STAT_V_OVERFLOW;
                         c->p = (c->p & ~bits) | (c->data_bus & bits);
                         setunsetflag(c->p, STAT_Z_ZERO, ((c->data_bus & c->a) == 0));
                         break;
+                    }
                     case 5: // LDY
                         c->y = c->data_bus;
                         _cpu_update_NZ_flags(c, c->y);
@@ -648,13 +650,12 @@ void *_cpu_push(Cpu6502 *c) {
 void *_cpu_pop(Cpu6502 *c) {
     switch (c->ir) {
         case 0x28: // PLP
-            printf("%02X => [%02X]", c->pd, c->p);
+        {
             u8 keep = c->p & (STAT_B_BREAK | STAT___IGNORE);
             c->p = c->pd & ~STAT___IGNORE & ~STAT___IGNORE;
             c->p |= keep;
-
-            printf(" = %02X\n", c->p);
             break;
+        }
     }
     c->pc++;
     c->tcu      = 0;

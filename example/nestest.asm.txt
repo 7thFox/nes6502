@@ -793,6 +793,7 @@ begin_tests:
     $C5F9: 86 10     STX $10 (16)
     $C5FB: 86 11     STX $11 (17)
 
+# "Group 1"
     $C5FD: 20 2d c7  JSR $c72d (50989)
     $C600: 20 db c7  JSR $c7db (51163)
     $C603: 20 85 c8  JSR $c885 (51333)
@@ -809,6 +810,7 @@ begin_tests:
     $C61F: a9 00     LDA #$00 (0)
     $C621: 85 00     STA $00 (0)
 
+# "Group 2"
     $C623: 20 e0 da  JSR $dae0 (56032)
     $C626: 20 4a df  JSR $df4a (57162)
     $C629: 20 b8 db  JSR $dbb8 (56248)
