@@ -372,15 +372,32 @@ void *_cpu_fetch_lo(Cpu6502 *c) {
                             _cpu_update_NZ_flags(c, c->a);
                             break;
                         case 1: // ROL
-                            c->a = (c->a << 1) | (c->a >> 7);
+                        {
+                            u8 c0 = c->p & STAT_C_CARRY;
+                            setunsetflag(c->p, STAT_C_CARRY, (c->a & 0x80) == 0x80);
+                            c->a = c->a << 1 | c0;
+                            _cpu_update_NZ_flags(c, c->a);
                             break;
+                        }
                         case 2: // LSR
                             setunsetflag(c->p, STAT_C_CARRY, c->a & 0x01);
                             c->a >>= 1;
                             _cpu_update_NZ_flags(c, c->a);
                             break;
                         case 3: // ROR
-                            c->a = (c->a >> 1) | (c->a << 7);
+                        {
+                            u8 c0 = c->p & STAT_C_CARRY;
+                            c->p = (c->p & ~STAT_C_CARRY) | (c->a & STAT_C_CARRY);
+                            c->a = c->a >> 1 | c0 << 7;
+                            _cpu_update_NZ_flags(c, c->a);
+                            break;
+                        }
+                            // setunsetflag(c->p, STAT_C_CARRY, c->a & 0x01);
+                            // c->a >>=1;
+                            // if ((c->p & STAT_C_CARRY) == STAT_C_CARRY) {
+                            //     c->a |= 0x80;
+                            // }
+                            // _cpu_update_NZ_flags(c, c->a);
                             break;
                         case 4: // TXA
                             c->a = c->x;
