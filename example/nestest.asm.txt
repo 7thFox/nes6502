@@ -800,7 +800,7 @@ begin_tests:
     $C606: 20 de cb  JSR $cbde (52190)
     $C609: 20 f8 cd  JSR $cdf8 (52728)
     $C60C: 20 ee ce  JSR $ceee (52974)
-    $C60F: 20 a2 cf  JSR $cfa2 (53154)
+    $C60F: 20 a2 cf  JSR tests_indirect_x # $cfa2 (53154)
     $C612: 20 74 d1  JSR $d174 (53620)
     $C615: 20 fb d4  JSR $d4fb (54523)
     $C618: 20 00 d9  JSR $d900 (55552)
@@ -2129,6 +2129,8 @@ test_1_15:
     $CF9D: a2 4d     LDX #$4d (77)
     $CF9F: 86 00     STX $00 (0)
     $CFA1: 60        RTS
+
+tests_indirect_x:
     $CFA2: a5 00     LDA $00 (0)
     $CFA4: 8d ff 07  STA $07ff (2047)
     $CFA7: a9 00     LDA #$00 (0)
@@ -2175,8 +2177,10 @@ test_1_15:
     $CFFA: a1 ff     LDA ($ff,X) (255)
     $CFFC: c9 5a     CMP #$5a (90)
     $CFFE: f0 05     BEQ $05 (5)
+test_1_58_fail:
     $D000: a9 58     LDA #$58 (88)
     $D002: 8d ff 07  STA $07ff (2047)
+test_1_59:
     $D005: a9 aa     LDA #$aa (170)
     $D007: a2 00     LDX #$00 (0)
     $D009: 81 80     STA ($80,X) (128)
@@ -2201,11 +2205,13 @@ test_1_15:
     $D02F: d0 07     BNE $07 (7)
     $D031: ad 00 04  LDA $0400 (1024)
     $D034: c9 ad     CMP #$ad (173)
-    $D036: f0 05     BEQ $05 (5)
+    $D036: f0 05     BEQ test_1_5a # $05 (5)
+test_1_59_fail:
     $D038: a9 59     LDA #$59 (89)
     $D03A: 8d ff 07  STA $07ff (2047)
     $D03D: ad ff 07  LDA $07ff (2047)
     $D040: 85 00     STA $00 (0)
+test_1_5a:
     $D042: a9 00     LDA #$00 (0)
     $D044: 8d 00 03  STA $0300 (768)
     $D047: a9 aa     LDA #$aa (170)

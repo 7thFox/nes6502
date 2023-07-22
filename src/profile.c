@@ -1,4 +1,7 @@
 #include "headers/profile.h"
+#include <bits/time.h>
+#include <cpuid.h>
+#include <time.h>
 
 unsigned long _profilerStart;
 FILE   *_profilerEvents = NULL;
@@ -10,10 +13,12 @@ size_t  _profilerFramesS = 0;
 void **_profileFrameFns;
 size_t _profileFrameFnsS;
 size_t _profilerNextFrame;
+unsigned long _apprxHz;
 
 
 #define PROFILE_MIN 0 // ~80% of un-minimized
 
+// #define NS_SAMPLE_FREQ 100000 // 500us / .5ms
 long get_frame(void *fn) {
     if (_profileFrameFns) {
 
@@ -51,7 +56,25 @@ void init_profiler() {
     _profileFrameFns = malloc(sizeof(void*) * _profileFrameFnsS);
     if (!_profileFrameFns) _profileFrameFnsS = 0;
 
+
+    struct timespec ts;
+    struct timespec ts2;
+    // ts.tv_sec = 0;
+    // ts.tv_nsec = NS_SAMPLE_FREQ;
+    clock_getres(CLOCK_MONOTONIC, &ts);
+    printf("Clock Resolution = %lis %lins\n", ts.tv_sec, ts.tv_nsec);
+    ts.tv_nsec*=10000000;
+
     unsigned int ui;
+    unsigned long i0, i1;
+    i0 = __rdtscp(&ui);
+    clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, &ts2);
+    i1 = __rdtscp(&ui);
+
+    _apprxHz = (i1 - i0) * 1000000000 / ts.tv_nsec;
+
+    printf("%li cyc in %lins (%lins?) => %liHz = %liMHz\n", i1-i0, ts.tv_nsec, ts.tv_nsec, _apprxHz, _apprxHz / 1000000);
+
     _profilerStart = __rdtscp(&ui);
 }
 
@@ -114,8 +137,13 @@ void end_profiler(const char *file_name) {
             fprintf(fd, "      \"type\": \"evented\",\n");
             fprintf(fd, "      \"name\": \"simple.txt\",\n");
             fprintf(fd, "      \"unit\": \"none\",\n");
-            fprintf(fd, "      \"startValue\": %lu,\n", _profilerStart);
-            fprintf(fd, "      \"endValue\": %lu,\n", profilerEnd);
+            fprintf(fd, "      \"startValue\":     %lu,\n", _profilerStart);
+            fprintf(fd, "      \"endValue\":       %lu,\n", profilerEnd);
+            // debug fields not used by speedscope:
+            fprintf(fd, "      \"ticksPerSecond\": %lu,\n", _apprxHz);
+            fprintf(fd, "      \"totalTicks\":     %lu,\n", (profilerEnd - _profilerStart));
+            fprintf(fd, "      \"totalMs\":        %lu,\n", (profilerEnd - _profilerStart) / (_apprxHz / 1000));
+
             fprintf(fd, "      \"events\": [\n");
             fwrite(_profilerEventsB, sizeof(char), _profilerEventsS-2, fd);// -2 for comma+newline
             fprintf(fd, "\n");
@@ -131,6 +159,8 @@ void end_profiler(const char *file_name) {
     }
     if (_profilerEventsB) free(_profilerEventsB);
     if (_profilerFramesB) free(_profilerFramesB);
+
+    _profilerEventsB = _profilerFramesB = NULL;
 }
 
 void __cyg_profile_func_enter (void *func __attribute__((unused)), void *caller  __attribute__((unused)))

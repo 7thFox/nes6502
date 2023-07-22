@@ -860,7 +860,9 @@ void *_cpu_read_ind_read_addrhi(Cpu6502 *c) {
 }
 
 void *_cpu_read_ind_read_val(Cpu6502 *c) {
+    int op_a = (c->ir & 0b11100000) >> 5;
     int op_b = (c->ir & 0b00011100) >> 2;
+
     if (op_b == 0) { // X,ind
         c->addr_bus = (c->data_bus << 8) | c->pd;
     }
@@ -872,6 +874,13 @@ void *_cpu_read_ind_read_val(Cpu6502 *c) {
             return _cpu_page_boundary;
         }
     }
+
+    if (op_a == 4) { // STA
+        c->data_bus = c->a;
+        unsetflag(c->bit_fields, PIN_READ);
+        return _cpu_write_zpg_fetch;
+    }
+
     return _cpu_read_addr;
 }
 

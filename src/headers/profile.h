@@ -2,6 +2,7 @@
 #define PROFILE_H
 
 #include "x86intrin.h"
+#include "cpuid.h"
 #include "execinfo.h"
 #include "stdio.h"
 
