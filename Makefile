@@ -1,5 +1,5 @@
-# FLAGS = -rdynamic -Wall -Wunused-function -Wextra -Werror
-FLAGS = -rdynamic -Wall -Wunused-function -Wextra -Werror -finstrument-functions -finstrument-functions-exclude-file-list=src/profile.c,src/entrypoints/monitor.c
+# FLAGS = -rdynamic -Wall -Wunused-function -Wextra -Werror -Wno-unused-parameter
+FLAGS = -rdynamic -Wall -Wunused-function -Wextra -Werror -Wno-unused-parameter -finstrument-functions -finstrument-functions-exclude-file-list=src/profile.c,src/entrypoints/monitor.c
 
 monitor: bin
 	gcc -lncurses $(FLAGS) src/*.c src/entrypoints/monitor.c -o bin/monitor

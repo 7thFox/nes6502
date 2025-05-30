@@ -1,7 +1,7 @@
 #include "headers/memmap.h"
 
 void mem_add_rom(MemoryMap *m, Rom *r, const char *name) {
-    tracef("mem_add_rom \n");
+    // tracef("mem_add_rom \n");
     if (r->rom_size > 0) {
         m->read_blocks[m->n_read_blocks].block_name = name;
         m->read_blocks[m->n_read_blocks].range_low  = r->map_offset;
@@ -12,7 +12,7 @@ void mem_add_rom(MemoryMap *m, Rom *r, const char *name) {
 }
 
 void mem_add_ram(MemoryMap *m, Ram *r, const char *name) {
-    tracef("mem_add_ram \n");
+    // tracef("mem_add_ram \n");
     if (r->size > 0) {
         m->read_blocks[m->n_read_blocks].block_name = name;
         m->read_blocks[m->n_read_blocks].range_low  = r->map_offset;
@@ -33,22 +33,22 @@ void mem_add_ppu(MemoryMap *m, PPURegisters *p) {
 }
 
 MemoryBlock *mem_get_read_block(MemoryMap *m, memaddr addr) {
-    tracef("mem_get_read_block $%04x\n", addr);
+    // tracef("mem_get_read_block $%04x\n", addr);
 
     for (uint i = 0; i < m->n_read_blocks; i++) {
         MemoryBlock *b = m->read_blocks + i;
-        tracef("use %s? (%04x-%04x) ", b->block_name, b->range_low, b->range_high);
+        // tracef("use %s? (%04x-%04x) ", b->block_name, b->range_low, b->range_high);
         if (b->range_low <= addr && b->range_high >= addr) {
-            tracef("YES!\n");
+            // tracef("YES!\n");
             return b;
         }
-        tracef("no\n");
+        // tracef("no\n");
     }
     return 0;
 }
 
 MemoryBlock *mem_get_write_block(MemoryMap *m, memaddr addr) {
-    tracef("mem_get_write_block \n");
+    // tracef("mem_get_write_block \n");
 
     for (uint i = 0; i < m->n_write_blocks; i++) {
         MemoryBlock *b = m->write_blocks + i;
@@ -60,7 +60,7 @@ MemoryBlock *mem_get_write_block(MemoryMap *m, memaddr addr) {
 }
 
 u8 mem_read_addr(MemoryMap *m, memaddr addr) {
-    tracef("mem_read_addr \n");
+    // tracef("mem_read_addr \n");
 
     if (m->_ppu && addr >= 0x2000 && addr <= 0x3FFF) {
         switch (addr % 0x08) {
@@ -77,7 +77,7 @@ u8 mem_read_addr(MemoryMap *m, memaddr addr) {
 }
 
 void mem_write_addr(MemoryMap *m, memaddr addr, u8 value) {
-    tracef("mem_write_addr \n");
+    // tracef("mem_write_addr \n");
 
     if (m->_ppu && addr >= 0x2000 && addr <= 0x3FFF) {
         switch (addr % 0x08) {
@@ -94,8 +94,8 @@ void mem_write_addr(MemoryMap *m, memaddr addr, u8 value) {
 
     MemoryBlock *b = mem_get_write_block(m, addr);
     if (b) {
-        tracef("[%04X] = %02X\n", addr - b->range_low, value);
+        // tracef("[%04X] = %02X\n", addr - b->range_low, value);
         b->values[addr - b->range_low] = value;
-        tracef("[%04X] = %02X\n", addr - b->range_low, b->values[addr - b->range_low]);
+        // tracef("[%04X] = %02X\n", addr - b->range_low, b->values[addr - b->range_low]);
     }
 }
