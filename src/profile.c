@@ -62,7 +62,7 @@ void init_profiler() {
     // ts.tv_sec = 0;
     // ts.tv_nsec = NS_SAMPLE_FREQ;
     clock_getres(CLOCK_MONOTONIC, &ts);
-    printf("Clock Resolution = %lis %lins\n", ts.tv_sec, ts.tv_nsec);
+    // printf("Clock Resolution = %lis %lins\n", ts.tv_sec, ts.tv_nsec);
     ts.tv_nsec*=10000000;
 
     unsigned int ui;
@@ -73,7 +73,7 @@ void init_profiler() {
 
     _apprxHz = (i1 - i0) * 1000000000 / ts.tv_nsec;
 
-    printf("%li cyc in %lins (%lins?) => %liHz = %liMHz\n", i1-i0, ts.tv_nsec, ts.tv_nsec, _apprxHz, _apprxHz / 1000000);
+    // printf("%li cyc in %lins (%lins?) => %liHz = %liMHz\n", i1-i0, ts.tv_nsec, ts.tv_nsec, _apprxHz, _apprxHz / 1000000);
 
     _profilerStart = __rdtscp(&ui);
 }

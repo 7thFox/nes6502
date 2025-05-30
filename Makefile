@@ -1,8 +1,17 @@
 # FLAGS = -rdynamic -Wall -Wunused-function -Wextra -Werror -Wno-unused-parameter
-FLAGS = -rdynamic -Wall -Wunused-function -Wextra -Werror -Wno-unused-parameter -finstrument-functions -finstrument-functions-exclude-file-list=src/profile.c,src/entrypoints/monitor.c
+FLAGS = -rdynamic \
+	-Wall -Wextra -Werror \
+	-Wno-comment \
+	-Wunused-function \
+	-Wno-unused-parameter \
+	-Wno-unused-variable \
+	-finstrument-functions -finstrument-functions-exclude-file-list=src/profile.c,src/entrypoints/monitor.c
 
-monitor: bin
-	gcc -lncurses $(FLAGS) src/*.c src/entrypoints/monitor.c -o bin/monitor
+monitor-ncurses: bin
+	gcc -lncurses $(FLAGS) src/*.c src/entrypoints/monitor.c -o bin/monitor-ncurses
+
+monitor-sdl: bin
+	gcc -lSDL2 -lSDL2_ttf -lSDL2_image $(FLAGS) src/*.c src/entrypoints/sdl_monitor.c -o bin/monitor
 
 test: bin
 	gcc $(FLAGS) src/*.c src/entrypoints/test.c -o bin/test
@@ -24,8 +33,11 @@ testerrors: bin
 	gcc $(FLAGS) src/*.c src/entrypoints/test.c -o bin/test
 	bin/test --errors-only
 
-run: monitor
+run: monitor-sdl
 	bin/monitor
+
+run-ncurses: monitor-ncurses
+	bin/monitor-ncurses
 
 clean:
 	rm -rf bin/

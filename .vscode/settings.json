@@ -33,7 +33,12 @@
     "unordered_set": "c",
     "vector": "c",
     "cstdlib": "c",
-    "ncurses.h": "c"
+    "ncurses.h": "c",
+    "sdl.h": "c",
+    "sdl_log.h": "c",
+    "chrono": "c",
+    "text_encoding": "c",
+    "typeinfo": "c"
   },
   "C_Cpp_Runner.cCompilerPath": "gcc",
   "C_Cpp_Runner.cppCompilerPath": "g++",

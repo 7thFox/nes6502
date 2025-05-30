@@ -46,7 +46,7 @@ bool rom_load(Rom *rom, const char *filepath) {
         rom->rom_size++;
     }
 
-    logf("Successfully loaded ROM '%s' with %li bytes ($%04x-$%04lx)\n", filepath, rom->rom_size, rom->map_offset, rom->map_offset + rom->rom_size - 1);
+    infof("Successfully loaded ROM '%s' with %li bytes ($%04x-$%04lx)\n", filepath, rom->rom_size, rom->map_offset, rom->map_offset + rom->rom_size - 1);
 
     return true;
 }

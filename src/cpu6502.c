@@ -72,7 +72,7 @@ void cpu_resb(Cpu6502 *c) {
     c->cyc      = 0;
     setflag(c->bit_fields, PIN_READ);
     c->on_next_clock = (void *(*)(void *))(_cpu_fetch_opcode);
-    logf("Reset CPU. PC set to $%04x ($fffc: $%02x, $fffd: $%02x)\n", c->pc, lo, hi);
+    infof("Reset CPU. PC set to $%04x ($fffc: $%02x, $fffd: $%02x)\n", c->pc, lo, hi);
 }
 
 void *_cpu_fetch_opcode(Cpu6502 *c) {
