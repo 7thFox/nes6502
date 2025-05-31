@@ -29,7 +29,7 @@
 
 #define FONT_SIZE 12
 
-#define RIGHT_PADDING_FIX 2
+#define RIGHT_PADDING_FIX 0
 #define BOTTOM_PADDING_FIX 1
 
 #define DEBUG_START 0 // normal resb logic
@@ -106,9 +106,6 @@ subrender(inst);
 subrender(cpu);
 subrender(ppu);
 
-SDL_Color fg_default;
-SDL_Color bg_default;
-
 int main() {
     int exit_code = 1;
 
@@ -137,7 +134,6 @@ int main() {
             fprintf(stderr, "Failed to init TTF\n");
             goto cleanup;
         }
-
 
         monitor.rend.main_win = SDL_CreateWindow(
             "nterm",
@@ -175,12 +171,6 @@ int main() {
         monitor.rend.font_h = test_surface->h;
         monitor.rend.font_w = test_surface->w;
         SDL_FreeSurface(test_surface);
-    }
-
-    // Setup Colors
-    {
-        fg_default = (SDL_Color){ 0xFF, 0xFF, 0xFF, 0xFF, };
-        bg_default = (SDL_Color){ 0x00, 0x00, 0x00, 0x00, };
     }
 
     // Setup Cpu
@@ -353,25 +343,41 @@ subrender(cpu)
 
     // Create componants
 
-    // PC, IR, TCU
-    // X, Y, A
-    // SP, PD, CYC
-    // N V _ B D I Z C
+    SDL_Color text_color = { 0xFF, 0xFF, 0xFF, 0xFF };
 
-    int w1 = m->rend.font_w * 3;
-    SDL_Surface *header = TTF_RenderText_Blended(m->rend.font, "CPU", fg_default);
+    // SDL_Surface *header = TTF_RenderText_Blended(m->rend.font, "CPU", text_color);
 
-    int w2 = m->rend.font_w * 9;
-    snprintf(buff, nbuff, "PC: $%04x", m->sim.cpu.pc);// 9
-    SDL_Surface *pc = TTF_RenderText_Blended(m->rend.font, buff, fg_default);
-    snprintf(buff, nbuff, "IR: %02X", m->sim.cpu.ir);// 6
-    SDL_Surface *ir = TTF_RenderText_Blended(m->rend.font, buff, fg_default);
-    snprintf(buff, nbuff, "TCU: %i", m->sim.cpu.tcu);// 9
-    SDL_Surface *tcu = TTF_RenderText_Blended(m->rend.font, buff, fg_default);
+    snprintf(buff, nbuff, "PC: $%04x", m->sim.cpu.pc);
+    SDL_Surface *pc = TTF_RenderText_Blended(m->rend.font, buff, text_color);
+
+    snprintf(buff, nbuff, "IR: %02X", m->sim.cpu.ir);
+    SDL_Surface *ir = TTF_RenderText_Blended(m->rend.font, buff, text_color);
+
+    snprintf(buff, nbuff, "TCU: %3i", m->sim.cpu.tcu);
+    SDL_Surface *tcu = TTF_RenderText_Blended(m->rend.font, buff, text_color);
+
+    snprintf(buff, nbuff, "X: %02X (%3i)", m->sim.cpu.x, m->sim.cpu.x);
+    SDL_Surface *regx = TTF_RenderText_Blended(m->rend.font, buff, text_color);
+
+    snprintf(buff, nbuff, "Y: %02X (%3i)", m->sim.cpu.y, m->sim.cpu.y);
+    SDL_Surface *regy = TTF_RenderText_Blended(m->rend.font, buff, text_color);
+
+    snprintf(buff, nbuff, "A: %02X (%3i)", m->sim.cpu.a, m->sim.cpu.a);
+    SDL_Surface *rega = TTF_RenderText_Blended(m->rend.font, buff, text_color);
+
+    snprintf(buff, nbuff, "SP: $%02X", m->sim.cpu.sp);
+    SDL_Surface *sp = TTF_RenderText_Blended(m->rend.font, buff, text_color);
+
+    snprintf(buff, nbuff, "PD: $%02X", m->sim.cpu.pd);
+    SDL_Surface *pd = TTF_RenderText_Blended(m->rend.font, buff, text_color);
+
+    snprintf(buff, nbuff, "CYC: %4li", m->sim.cpu.cyc % 10000);
+    SDL_Surface *cyc = TTF_RenderText_Blended(m->rend.font, buff, text_color);
 
     SDL_Surface *boxes[] = {
-        header,         NULL,
-        pc, ir, tcu,    NULL,
+        pc, ir, tcu,        NULL,
+        regx, regy, rega,   NULL,
+        sp, pd, cyc,        NULL,
     };
 
     int nboxes = sizeof(boxes) / sizeof(SDL_Surface*);
@@ -380,9 +386,9 @@ subrender(cpu)
 
     struct boxbound_t bound = {
         .x_margin  = 4, .y_margin  = 4,
-        .x_padding = 8, .y_padding = 2 };
+        .x_padding = 4, .y_padding = 1 };
 
-    int wmax = 0;
+    int wmax = 0;// TODO JOSH: Flags
     int hmax = 0;
     int nlines = 0;
     for (int i = 0; i < nboxes; i++)
@@ -410,6 +416,21 @@ subrender(cpu)
         if (hline > hmax) hmax = hline;
     }
 
+    // wmax adjust for flags evenly splitting:
+    // we ideally would for all, but 1) that's hard
+    // and 2) it's most noticible on flags
+    int splitforflags = wmax
+                      - 9 * bound.x_margin
+                      - 8 * m->rend.font_w;
+    if (splitforflags % 16 != 0) // 16 => 8 * 2 (l+r padding)
+    {
+        wmax = 9 * bound.x_margin
+             + 8 * m->rend.font_w
+             + 16 * ((splitforflags / 16)+1);
+    }
+
+    nlines++;// flags have custom handling
+
     int h = nlines     * hmax
           + nlines*2   * bound.y_padding
           + (nlines+1) * bound.y_margin;
@@ -421,8 +442,8 @@ subrender(cpu)
         32,
         0x00, 0x00, 0x00, 0x00);
 
-    // Uint32 rgb = SDL_MapRGB(final->format, 0x00, 0x00, 0xFF);
-    Uint32 rgb = SDL_MapRGB(final->format, 0xFF, 0x00, 0x00);
+    Uint32 rgb = SDL_MapRGB(final->format, 0x00, 0x00, 0x80);
+    // Uint32 rgb = SDL_MapRGB(final->format, 0xFF, 0x00, 0x00);
 
     int y_offset = 0;
     for (int i = 0; i < nboxes; i++)
@@ -433,6 +454,8 @@ subrender(cpu)
         {
             if (boxes[i]->w > wline) wline = boxes[i]->w;
         }
+
+        wline += RIGHT_PADDING_FIX;
 
         int wsum = ncols     * wline
                  + ncols*2   * bound.x_padding
@@ -460,6 +483,58 @@ subrender(cpu)
         y_offset += hmax + 2*bound.y_padding + bound.y_margin;
     }
 
+    for (int i = 0; i < nboxes; i++)
+    {
+        if (!boxes[i]) continue;
+        SDL_FreeSurface(boxes[i]);
+    }
+
+    {
+        Uint32 rgb_on  = SDL_MapRGB(final->format, 0x00, 0x40, 0x00);
+        Uint32 rgb_off = SDL_MapRGB(final->format, 0x40, 0x00, 0x00);
+        char flagchars[] = { 'N', 'V', '_', 'B', 'D', 'I', 'Z', 'C' };
+
+        int wline = m->rend.font_w;
+
+
+        debugf("wfont %i", m->rend.font_w);
+
+        wline += RIGHT_PADDING_FIX;
+
+        int ncols = sizeof(flagchars) / sizeof(char);
+        int wsum = ncols     * wline
+                 + ncols*2   * bound.x_padding
+                 + (ncols+1) * bound.x_margin;
+        int extra = wmax - wsum;
+        int x_offset = 0;
+
+        struct boxbound_t flag_bound =
+            { bound.x_margin,                bound.y_margin,
+              bound.x_padding+extra/ncols/2, bound.y_padding };
+
+        for (int i = 0; i < ncols; i++)
+        {
+            snprintf(buff, nbuff, "%c", flagchars[i]);
+            SDL_Surface *flag = TTF_RenderText_Blended(m->rend.font, buff, text_color);
+
+            bool on = ((m->sim.cpu.pd >> i) & 1) == 1;
+
+            render_text_box(final,
+                flag,
+                (SDL_Rect){
+                    x_offset,
+                    y_offset,
+                    wline + 2*flag_bound.x_padding + 2*flag_bound.x_margin,
+                    hmax  + 2*flag_bound.y_padding + 2*flag_bound.y_margin},
+                on ? rgb_on : rgb_off,
+                flag_bound);
+
+            x_offset += wline + 2*flag_bound.x_padding + flag_bound.x_margin;
+
+            SDL_FreeSurface(flag);
+        }
+    }
+
     // render_text_box(final, header, r_header, tbox);
     // render_text_box(final, pc,     r_pc,     tbox);
     // render_text_box(final, ir,     r_ir,     tbox);
@@ -467,11 +542,6 @@ subrender(cpu)
 
     // Free componant surfaces
 
-    for (int i = 0; i < nboxes; i++)
-    {
-        if (!boxes[i]) continue;
-        SDL_FreeSurface(boxes[i]);
-    }
 
     return final;
 }

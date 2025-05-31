@@ -8,8 +8,8 @@
 #define LOG_LEVEL_TRACE   4
 
 // #define LOG_LEVEL LOG_LEVEL_TRACE
-// #define LOG_LEVEL LOG_LEVEL_DEBUG
-#define LOG_LEVEL 2
+#define LOG_LEVEL LOG_LEVEL_DEBUG
+// #define LOG_LEVEL 2
 
 #include "execinfo.h"
 #include "signal.h"
@@ -27,11 +27,12 @@ bool enable_stacktrace();
 // #define LOG_FILE_TO_USE _log_file
 #define LOG_FILE_TO_USE stdout
 
-#define _infof(prefix, ...)                     \
+#define _infof(prefix, ...)                    \
     if (LOG_FILE_TO_USE)                       \
     {                                          \
         fprintf(LOG_FILE_TO_USE, prefix);      \
         fprintf(LOG_FILE_TO_USE, __VA_ARGS__); \
+        fprintf(LOG_FILE_TO_USE, "\n");        \
         fflush(LOG_FILE_TO_USE);               \
     }
 
