@@ -38,7 +38,8 @@
     "sdl_log.h": "c",
     "chrono": "c",
     "text_encoding": "c",
-    "typeinfo": "c"
+    "typeinfo": "c",
+    "sdl_image.h": "c"
   },
   "C_Cpp_Runner.cCompilerPath": "gcc",
   "C_Cpp_Runner.cppCompilerPath": "g++",

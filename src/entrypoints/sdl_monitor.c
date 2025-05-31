@@ -15,6 +15,7 @@
 #include <SDL2/SDL_video.h>
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_image.h>
+#include <SDL2/SDL_keycode.h>
 #ifdef _WIN32
 #include <SDL/SDL.h>
 #else
@@ -27,10 +28,10 @@
 #include "stdio.h"
 #include "time.h"
 
-#define FONT_SIZE 12
+#define FONT_SIZE 14
 
 #define RIGHT_PADDING_FIX 0
-#define BOTTOM_PADDING_FIX 1
+#define BOTTOM_PADDING_FIX 0
 
 #define DEBUG_START 0 // normal resb logic
 // #define DEBUG_START 0xCEEE
@@ -69,6 +70,8 @@ struct rendering_t
 struct simstate_t
 {
     bool exit;
+    bool do_step;
+    bool free_run;
 };
 
 struct monitor_t
@@ -85,7 +88,8 @@ struct boxbound_t
 };
 
 void user_input(struct simstate_t *s);
-void run_sim(struct simstate_t state, struct simulation_t *sim);
+void run_sim(struct simstate_t *state, struct simulation_t *sim);
+void render(struct simstate_t state, struct simulation_t sim, struct rendering_t *rend);
 
 SDL_Rect clamp(SDL_Rect rect, int w, int h);
 void render_text_box(
@@ -95,9 +99,11 @@ void render_text_box(
     Uint32 rgb,
     struct boxbound_t tbox);
 
-void render(struct monitor_t *m);
-
-#define subrender(name) SDL_Surface* render_##name(struct monitor_t *m, int w_totmax, int h_totmax)
+#define subrender(name) SDL_Surface* render_##name( \
+    struct simstate_t   state,                      \
+    struct simulation_t sim,                        \
+    struct rendering_t *rend,                       \
+    int w_totmax, int h_totmax)
 
 subrender(stack);
 subrender(ram);
@@ -114,8 +120,7 @@ int main() {
         if (!init_logging("monitor.log"))
             exit(EXIT_FAILURE);
 
-        init_profiler();
-        tracef("main \n");
+        // init_profiler();
 
         enable_stacktrace();
     }
@@ -218,8 +223,8 @@ int main() {
     while (!monitor.state.exit)
     {
         user_input(&monitor.state);
-        run_sim(monitor.state, &monitor.sim);
-        render(&monitor);
+        run_sim(&monitor.state, &monitor.sim);
+        render(monitor.state, monitor.sim, &monitor.rend);
     }
 
     exit_code = 0;
@@ -231,6 +236,10 @@ cleanup:
     // IMG_Quit();
     TTF_Quit();
     SDL_Quit();
+
+    end_logging();
+    end_profiler("sdl_monitor-profile.json");
+
     return exit_code;
 
     // signal(SIGINT, cleanup);
@@ -257,83 +266,143 @@ void user_input(struct simstate_t *s)
                         break;
                 }
                 break;
-            // case SDL_KEYDOWN:
-            //     switch (ev.key.keysym.sym)
-            //     {
-            //         case SDLK_BACKSPACE:
-            //             if (term->user_input_pos > 0)
-            //             {
-            //                 term->user_input_buf[term->user_input_pos-1] = '\0';
-            //                 term->user_input_pos--;
-            //                 term->do_render_clear = true;
-            //             }
-            //             break;
-            //     }
-            //     break;
-            // case SDL_TEXTINPUT:
-            //     for (int i = 0; ev.text.text[i] != '\0'; i++)
-            //     {
-            //         if (term->user_input_pos < USER_INPUT_BUFFER_MAX)
-            //         {
-            //             term->user_input_buf[term->user_input_pos] = ev.text.text[i];
-            //             term->user_input_buf[term->user_input_pos+1] = '\0';
-            //             term->user_input_pos++;
-            //         }
-            //     }
-            //     break;
+            case SDL_KEYDOWN:
+                switch (ev.key.keysym.sym)
+                {
+                    case SDLK_SPACE:
+                        if (s->free_run)
+                        {
+                            s->free_run = false;
+                        }
+                        else
+                        {
+                            s->do_step = true;
+                        }
+                        break;
+                    case SDLK_F5:
+                        s->free_run = true;
+                        break;
+                    case SDLK_q:
+                    case SDLK_c:
+                        if ((ev.key.keysym.mod & KMOD_CTRL) != 0)
+                        {
+                            s->exit = true;
+                        }
+                        break;
+                }
+                break;
         }
     }
 }
 
-void run_sim(struct simstate_t state, struct simulation_t *sim)
+void run_sim(struct simstate_t *state, struct simulation_t *sim)
 {
+    if (state->free_run)
+    {
+        cpu_pulse(&sim->cpu);
+    }
+    else if (state->do_step)
+    {
+        state->do_step = false;
 
+        cpu_pulse(&sim->cpu);
+    }
 }
 
-void render(struct monitor_t *m)
+void render(struct simstate_t state, struct simulation_t sim, struct rendering_t *rend)
 {
-    SDL_RenderClear(m->rend.main_rend);
+    SDL_RenderClear(rend->main_rend);
 
     int w, h;
-    SDL_GetWindowSize(m->rend.main_win, &w, &h);
+    SDL_GetWindowSize(rend->main_win, &w, &h);
 
     // Create Surfaces
-    SDL_Surface *s_cpu = render_cpu(m, w, h);
+    SDL_Surface *s_cpu = render_cpu(state, sim, rend, w,            h);
+    SDL_Surface *s_rom = render_rom(state, sim, rend, w - s_cpu->w, h);
 
     // Create Textures
-    SDL_Texture *t_cpu = SDL_CreateTextureFromSurface(m->rend.main_rend, s_cpu);
+    __cyg_profile_func_enter(&SDL_CreateTextureFromSurface, NULL);
+        SDL_Texture *t_cpu = SDL_CreateTextureFromSurface(rend->main_rend, s_cpu);
+        SDL_Texture *t_rom = SDL_CreateTextureFromSurface(rend->main_rend, s_rom);
+    __cyg_profile_func_exit(&SDL_CreateTextureFromSurface, NULL);
 
     // Arrange Surfaces and RenderCopy
-    SDL_RenderCopy(m->rend.main_rend, t_cpu, NULL, &(SDL_Rect){
+    SDL_RenderCopy(rend->main_rend, t_cpu, NULL, &(SDL_Rect){
         w-s_cpu->w, 0,
         s_cpu->w,   s_cpu->h});
+    SDL_RenderCopy(rend->main_rend, t_rom, NULL, &(SDL_Rect){
+        0, 0,
+        s_rom->w,   s_rom->h});
+
+    // TODO PERFORMANCE: Better texture caching scheme
 
     // destory surfaces and textures
-    SDL_FreeSurface(s_cpu);
-    SDL_DestroyTexture(t_cpu);
+    __cyg_profile_func_enter(&SDL_FreeSurface, NULL);
+        SDL_FreeSurface(s_cpu);
+        SDL_FreeSurface(s_rom);
+    __cyg_profile_func_exit(&SDL_FreeSurface, NULL);
 
-    SDL_RenderPresent(m->rend.main_rend);
+    __cyg_profile_func_enter(&SDL_DestroyTexture, NULL);
+        SDL_DestroyTexture(t_cpu);
+        SDL_DestroyTexture(t_rom);
+    __cyg_profile_func_exit(&SDL_DestroyTexture, NULL);
+
+    __cyg_profile_func_enter(&SDL_RenderPresent, NULL);
+        SDL_RenderPresent(rend->main_rend);
+    __cyg_profile_func_exit(&SDL_RenderPresent, NULL);
 }
 
 
 subrender(stack)
 {
-    return NULL;
+    return SDL_CreateRGBSurface(0, 0, 0, 32, 0x00, 0x00, 0x00, 0x00);
 }
 
 subrender(ram)
 {
-    return NULL;
+    return SDL_CreateRGBSurface(0, 0, 0, 32, 0x00, 0x00, 0x00, 0x00);
 }
 
 subrender(rom)
 {
-    return NULL;
+    const int chars_per_byte = 2  // hex
+                             + 1  // spacer left
+                             + 1; // ASCII
+    // + 5 $ADDR
+    // + 1 char right spacer
+    // + 2 char ASCII
+
+    SDL_Color text_color = { 0xFF, 0xFF, 0xFF, 0xFF };
+    SDL_Color bg_color = { 0x00, 0x00, 0x00, 0x00 };
+
+    int box_offset = rend->font_h/2 - 4 - 1;
+
+    SDL_Surface *s = SDL_CreateRGBSurface(0, w_totmax, h_totmax, 32, 0x00, 0x00, 0x00, 0x00);
+    render_text_box(s,
+        NULL,
+        (SDL_Rect){0,box_offset,w_totmax, h_totmax-box_offset},
+        SDL_MapRGB(s->format, 0x80, 0x80, 0x80),
+        (struct boxbound_t){4,4,4,4});
+
+    {
+        SDL_Surface *header = TTF_RenderText_Shaded(rend->font, "ROM", text_color, bg_color);
+
+        SDL_FillRect(s,
+            &(SDL_Rect){2*box_offset+4, 0, header->w+8, header->h+4},
+            SDL_MapRGBA(s->format,0,0,0,0));
+        SDL_BlitSurface(
+            header, NULL,
+            s, &(SDL_Rect){ 2*box_offset+4+4, 0, header->w, header->h });
+
+        SDL_FreeSurface(header);
+    }
+
+    return s;
 }
 
 subrender(inst)
 {
-    return NULL;
+    return SDL_CreateRGBSurface(0, 0, 0, 32, 0x00, 0x00, 0x00, 0x00);
 }
 
 subrender(cpu)
@@ -345,34 +414,34 @@ subrender(cpu)
 
     SDL_Color text_color = { 0xFF, 0xFF, 0xFF, 0xFF };
 
-    // SDL_Surface *header = TTF_RenderText_Blended(m->rend.font, "CPU", text_color);
+    // SDL_Surface *header = TTF_RenderText_Blended(rend->font, "CPU", text_color);
 
-    snprintf(buff, nbuff, "PC: $%04x", m->sim.cpu.pc);
-    SDL_Surface *pc = TTF_RenderText_Blended(m->rend.font, buff, text_color);
+    snprintf(buff, nbuff, "PC: $%04x", sim.cpu.pc);
+    SDL_Surface *pc = TTF_RenderText_Blended(rend->font, buff, text_color);
 
-    snprintf(buff, nbuff, "IR: %02X", m->sim.cpu.ir);
-    SDL_Surface *ir = TTF_RenderText_Blended(m->rend.font, buff, text_color);
+    snprintf(buff, nbuff, "IR: %02X", sim.cpu.ir);
+    SDL_Surface *ir = TTF_RenderText_Blended(rend->font, buff, text_color);
 
-    snprintf(buff, nbuff, "TCU: %3i", m->sim.cpu.tcu);
-    SDL_Surface *tcu = TTF_RenderText_Blended(m->rend.font, buff, text_color);
+    snprintf(buff, nbuff, "TCU: %3i", sim.cpu.tcu);
+    SDL_Surface *tcu = TTF_RenderText_Blended(rend->font, buff, text_color);
 
-    snprintf(buff, nbuff, "X: %02X (%3i)", m->sim.cpu.x, m->sim.cpu.x);
-    SDL_Surface *regx = TTF_RenderText_Blended(m->rend.font, buff, text_color);
+    snprintf(buff, nbuff, "X: %02X (%3i)", sim.cpu.x, sim.cpu.x);
+    SDL_Surface *regx = TTF_RenderText_Blended(rend->font, buff, text_color);
 
-    snprintf(buff, nbuff, "Y: %02X (%3i)", m->sim.cpu.y, m->sim.cpu.y);
-    SDL_Surface *regy = TTF_RenderText_Blended(m->rend.font, buff, text_color);
+    snprintf(buff, nbuff, "Y: %02X (%3i)", sim.cpu.y, sim.cpu.y);
+    SDL_Surface *regy = TTF_RenderText_Blended(rend->font, buff, text_color);
 
-    snprintf(buff, nbuff, "A: %02X (%3i)", m->sim.cpu.a, m->sim.cpu.a);
-    SDL_Surface *rega = TTF_RenderText_Blended(m->rend.font, buff, text_color);
+    snprintf(buff, nbuff, "A: %02X (%3i)", sim.cpu.a, sim.cpu.a);
+    SDL_Surface *rega = TTF_RenderText_Blended(rend->font, buff, text_color);
 
-    snprintf(buff, nbuff, "SP: $%02X", m->sim.cpu.sp);
-    SDL_Surface *sp = TTF_RenderText_Blended(m->rend.font, buff, text_color);
+    snprintf(buff, nbuff, "SP: $%02X", sim.cpu.sp);
+    SDL_Surface *sp = TTF_RenderText_Blended(rend->font, buff, text_color);
 
-    snprintf(buff, nbuff, "PD: $%02X", m->sim.cpu.pd);
-    SDL_Surface *pd = TTF_RenderText_Blended(m->rend.font, buff, text_color);
+    snprintf(buff, nbuff, "PD: $%02X", sim.cpu.pd);
+    SDL_Surface *pd = TTF_RenderText_Blended(rend->font, buff, text_color);
 
-    snprintf(buff, nbuff, "CYC: %4li", m->sim.cpu.cyc % 10000);
-    SDL_Surface *cyc = TTF_RenderText_Blended(m->rend.font, buff, text_color);
+    snprintf(buff, nbuff, "CYC: %4li", sim.cpu.cyc % 10000);
+    SDL_Surface *cyc = TTF_RenderText_Blended(rend->font, buff, text_color);
 
     SDL_Surface *boxes[] = {
         pc, ir, tcu,        NULL,
@@ -421,11 +490,11 @@ subrender(cpu)
     // and 2) it's most noticible on flags
     int splitforflags = wmax
                       - 9 * bound.x_margin
-                      - 8 * m->rend.font_w;
+                      - 8 * rend->font_w;
     if (splitforflags % 16 != 0) // 16 => 8 * 2 (l+r padding)
     {
         wmax = 9 * bound.x_margin
-             + 8 * m->rend.font_w
+             + 8 * rend->font_w
              + 16 * ((splitforflags / 16)+1);
     }
 
@@ -435,7 +504,16 @@ subrender(cpu)
           + nlines*2   * bound.y_padding
           + (nlines+1) * bound.y_margin;
 
-    SDL_Surface *final = SDL_CreateRGBSurface(
+    SDL_Surface *final;
+
+    if (wmax > w_totmax ||
+        h > h_totmax)
+    {
+        final = TTF_RenderText_Blended(rend->font, "CPU: Too Small", text_color);
+        goto no_render;
+    }
+
+    final = SDL_CreateRGBSurface(
         0,
         wmax,
         h,
@@ -483,21 +561,13 @@ subrender(cpu)
         y_offset += hmax + 2*bound.y_padding + bound.y_margin;
     }
 
-    for (int i = 0; i < nboxes; i++)
-    {
-        if (!boxes[i]) continue;
-        SDL_FreeSurface(boxes[i]);
-    }
 
     {
-        Uint32 rgb_on  = SDL_MapRGB(final->format, 0x00, 0x40, 0x00);
-        Uint32 rgb_off = SDL_MapRGB(final->format, 0x40, 0x00, 0x00);
+        Uint32 rgb_on  = SDL_MapRGB(final->format, 0x00, 0x80, 0x00);
+        Uint32 rgb_off = SDL_MapRGB(final->format, 0x80, 0x00, 0x00);
         char flagchars[] = { 'N', 'V', '_', 'B', 'D', 'I', 'Z', 'C' };
 
-        int wline = m->rend.font_w;
-
-
-        debugf("wfont %i", m->rend.font_w);
+        int wline = rend->font_w;
 
         wline += RIGHT_PADDING_FIX;
 
@@ -515,9 +585,9 @@ subrender(cpu)
         for (int i = 0; i < ncols; i++)
         {
             snprintf(buff, nbuff, "%c", flagchars[i]);
-            SDL_Surface *flag = TTF_RenderText_Blended(m->rend.font, buff, text_color);
+            SDL_Surface *flag = TTF_RenderText_Blended(rend->font, buff, text_color);
 
-            bool on = ((m->sim.cpu.pd >> i) & 1) == 1;
+            bool on = ((sim.cpu.pd >> i) & 1) == 1;
 
             render_text_box(final,
                 flag,
@@ -542,15 +612,20 @@ subrender(cpu)
 
     // Free componant surfaces
 
+no_render:
+    for (int i = 0; i < nboxes; i++)
+    {
+        if (!boxes[i]) continue;
+        SDL_FreeSurface(boxes[i]);
+    }
 
     return final;
 }
 
 subrender(ppu)
 {
-    return NULL;
+    return SDL_CreateRGBSurface(0, 0, 0, 32, 0x00, 0x00, 0x00, 0x00);
 }
-
 
 SDL_Rect clamp(SDL_Rect rect, int w, int h)
 {
@@ -576,13 +651,25 @@ void render_text_box(
             rect.w - 2*bound.x_margin,
             rect.h - 2*bound.y_margin},
         rgb);
-    SDL_BlitSurface(
-        text, NULL,
-        dest, &(SDL_Rect){
-            rect.x + bound.x_margin + bound.x_padding,
-            rect.y + bound.y_margin + bound.y_padding,
-            rect.w - x_tot,
-            rect.h - y_tot });
+    // un-fill to create 2px border:
+    SDL_FillRect(dest,
+        &(SDL_Rect){
+            rect.x + bound.x_margin + 2,
+            rect.y + bound.y_margin + 2,
+            rect.w - 2*bound.x_margin - 4,
+            rect.h - 2*bound.y_margin - 4},
+        SDL_MapRGBA(dest->format,0,0,0,0));
+
+    if (text)
+    {
+        SDL_BlitSurface(
+            text, NULL,
+            dest, &(SDL_Rect){
+                rect.x + bound.x_margin + bound.x_padding,
+                rect.y + bound.y_margin + bound.y_padding,
+                rect.w - x_tot,
+                rect.h - y_tot });
+    }
 }
 
 // void draw(Cpu6502 *cpu);
